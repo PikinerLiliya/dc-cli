@@ -1,15 +1,12 @@
-import { Argv } from 'yargs';
+import { builder } from './content-item';
 import YargsCommandBuilderOptions from '../common/yargs/yargs-command-builder-options';
+import Yargs from 'yargs/yargs';
 
-export const command = 'content-item';
-
-export const desc = 'Content Item';
-
-export const builder = (yargs: Argv): Argv =>
-  yargs
-    .commandDir('content-item', YargsCommandBuilderOptions)
-    .demandCommand()
-    .help();
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export const handler = (): void => {};
+describe('content-item command', function() {
+  it('should include the commands in the content-item dir', () => {
+    const argv = Yargs(process.argv.slice(2));
+    const spyCommandDir = jest.spyOn(argv, 'commandDir').mockReturnValue(argv);
+    builder(argv);
+    expect(spyCommandDir).toHaveBeenCalledWith('content-item', YargsCommandBuilderOptions);
+  });
+});
