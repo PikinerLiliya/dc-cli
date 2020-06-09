@@ -158,7 +158,11 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
       contentItems = contentItems.filter(item => itemsArray.findIndex(id => equalsOrRegex(item.label || '', id)) != -1);
     } else if (contentType != null) {
       const itemsArray: string[] = Array.isArray(contentType) ? contentType : [contentType];
-      contentItems = contentItems.filter(item => itemsArray.findIndex(id => equalsOrRegex(item.label || '', id)) != -1);
+      contentItems = contentItems.filter(item => {
+        if (item && item.body && item.body._meta) {
+          return itemsArray.findIndex(id => equalsOrRegex(item.body._meta.schema || '', id)) != -1;
+        }
+      });
     } else {
       console.log('No filter, ID or log file was given, so archiving all content.');
       allContent = true;
