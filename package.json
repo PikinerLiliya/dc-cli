@@ -107,11 +107,14 @@
     "typescript": "^3.6.3"
   },
   "dependencies": {
+    "@types/node-fetch": "^2.5.7",
     "@types/rimraf": "^3.0.0",
+    "ajv": "^6.12.3",
     "axios": "^0.18.1",
     "chalk": "^2.4.2",
     "dc-management-sdk-js": "^1.4.1",
     "lodash": "^4.17.15",
+    "node-fetch": "^2.6.0",
     "sanitize-filename": "^1.6.3",
     "table": "^5.4.6",
     "yargs": "^14.0.0"
