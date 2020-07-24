@@ -10,6 +10,3 @@ export const builder = (yargs: Argv): Argv =>
     .commandDir('content-repository', YargsCommandBuilderOptions)
     .demandCommand()
     .help();
-
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export const handler = (): void => {};

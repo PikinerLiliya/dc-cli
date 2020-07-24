@@ -107,9 +107,14 @@ export class MockContent {
   private createMockHub(): Hub {
     const mockHub = new Hub();
 
-    const mockRepoList = jest
-      .fn()
-      .mockImplementation(() => Promise.resolve(new MockPage(ContentRepository, this.repos.map(repo => repo.repo))));
+    const mockRepoList = jest.fn().mockImplementation(() =>
+      Promise.resolve(
+        new MockPage(
+          ContentRepository,
+          this.repos.map(repo => repo.repo)
+        )
+      )
+    );
     const mockTypesList = jest
       .fn()
       .mockImplementation(() => Promise.resolve(new MockPage(ContentType, Array.from(this.typeById.values()))));
@@ -158,16 +163,14 @@ export class MockContent {
     const mockItemList = jest.fn().mockImplementation(() => Promise.resolve(new MockPage(ContentItem, mockRepo.items)));
     repo.related.contentItems.list = mockItemList;
 
-    const mockFolderList = jest
-      .fn()
-      .mockImplementation(() =>
-        Promise.resolve(
-          new MockPage(
-            Folder,
-            this.folders.filter(folder => (folder as any).repoId === repoId && folder.id == folder.name)
-          )
+    const mockFolderList = jest.fn().mockImplementation(() =>
+      Promise.resolve(
+        new MockPage(
+          Folder,
+          this.folders.filter(folder => (folder as any).repoId === repoId && folder.id == folder.name)
         )
-      );
+      )
+    );
     repo.related.folders.list = mockFolderList;
 
     const mockItemCreate = jest.fn().mockImplementation((item: ContentItem) => {
@@ -405,7 +408,12 @@ export class MockContent {
     folder.related.contentRepository = mockFolderRepo;
 
     mockFolderList.mockImplementation(() =>
-      Promise.resolve(new MockPage(ContentItem, this.items.filter(item => item.folderId === id)))
+      Promise.resolve(
+        new MockPage(
+          ContentItem,
+          this.items.filter(item => item.folderId === id)
+        )
+      )
     );
 
     mockFolderSubfolder.mockImplementation(() => {

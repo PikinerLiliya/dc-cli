@@ -592,7 +592,12 @@ describe('content-item import command', () => {
       await createContent('temp/import/ref/', templates, false);
 
       // Add an existing mapping for the two items in "oldTemplates".
-      const existingMapping = { contentItems: [['ref1', 'new1'], ['ref2', 'new2']] };
+      const existingMapping = {
+        contentItems: [
+          ['ref1', 'new1'],
+          ['ref2', 'new2']
+        ]
+      };
       await ensureDirectoryExists('temp/import/ref/');
       await rimraf('temp/import/ref.json');
       await promisify(writeFile)('temp/import/ref.json', JSON.stringify(existingMapping));
@@ -734,7 +739,12 @@ describe('content-item import command', () => {
       await createContent('temp/import/mapping/', oldTemplates.concat(templates), false);
 
       // Add an existing mapping for the two items in "oldTemplates".
-      const existingMapping = { contentItems: [['old1', 'new1'], ['old2', 'new2']] };
+      const existingMapping = {
+        contentItems: [
+          ['old1', 'new1'],
+          ['old2', 'new2']
+        ]
+      };
       await ensureDirectoryExists('temp/import/mapping/');
       await rimraf('temp/import/mapping.json');
       await promisify(writeFile)('temp/import/mapping.json', JSON.stringify(existingMapping));
@@ -837,7 +847,12 @@ describe('content-item import command', () => {
       await createContent('temp/import/force/', skips.concat(oldTemplates.concat(templates)), true);
 
       // Add an existing mapping for the two items in "oldTemplates".
-      const existingMapping = { contentItems: [['old1', 'new1'], ['old2', 'new2']] };
+      const existingMapping = {
+        contentItems: [
+          ['old1', 'new1'],
+          ['old2', 'new2']
+        ]
+      };
       await ensureDirectoryExists('temp/import/force/');
       await rimraf('temp/import/force.json');
       await promisify(writeFile)('temp/import/force.json', JSON.stringify(existingMapping));

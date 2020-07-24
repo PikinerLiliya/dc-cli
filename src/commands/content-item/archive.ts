@@ -3,10 +3,11 @@ import { ConfigurationParameters } from '../configure';
 import dynamicContentClientFactory from '../../services/dynamic-content-client-factory';
 import { ArchiveLog } from '../../common/archive/archive-log';
 import paginator from '../../common/dc-management-sdk-js/paginator';
-import { getDefaultLogPath, confirmArchive } from '../../common/archive/archive-helpers';
+import { confirmArchive } from '../../common/archive/archive-helpers';
 import ArchiveOptions from '../../common/archive/archive-options';
-import { ContentItem, ContentRepository } from 'dc-management-sdk-js';
+import { ContentItem } from 'dc-management-sdk-js';
 import { equalsOrRegex } from '../../common/filter/filter';
+import { getDefaultLogPath } from '../../common/log-helpers';
 
 export const command = 'archive [id]';
 
@@ -22,12 +23,12 @@ export const builder = (yargs: Argv): void => {
       describe:
         'The ID of a content item to be archived. If id is not provided, this command will archive ALL content items through all content repositories in the hub.'
     })
-    .option('repo', {
+    .option('repoId', {
       type: 'string',
       describe: 'The ID of a content repository to search items in to be archived.',
       requiresArg: false
     })
-    .option('folder', {
+    .option('folderId', {
       type: 'string',
       describe: 'The ID of a folder to search items in to be archived.',
       requiresArg: false
@@ -73,14 +74,14 @@ export const builder = (yargs: Argv): void => {
 };
 
 export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationParameters>): Promise<void> => {
-  const { id, logFile, force, silent, ignoreError, hubId, revertLog, repo, folder, name, contentType } = argv;
+  const { id, logFile, force, silent, ignoreError, hubId, revertLog, repoId, folderId, name, contentType } = argv;
   const client = dynamicContentClientFactory(argv);
 
   let contentItems: ContentItem[] = [];
   let allContent = false;
   let missingContent = false;
 
-  if (repo && id) {
+  if (repoId && id) {
     console.log('ID of content item is specified, ignoring repository ID');
   }
 
@@ -89,7 +90,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     return;
   }
 
-  if (repo && folder) {
+  if (repoId && folderId) {
     console.log('Folder is specified, ignoring repository ID');
   }
 
@@ -103,37 +104,33 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     }
   } else {
     try {
-      if (folder) {
-        try {
-          const currentFolder = await client.folders.get(folder);
+      const hub = await client.hubs.get(hubId);
+      const repoIds = typeof repoId === 'string' ? [repoId] : repoId || [];
+      const folderIds = typeof folderId === 'string' ? [folderId] : folderId || [];
 
-          contentItems = await paginator(currentFolder.related.contentItems.list, { status: 'ACTIVE' });
-        } catch (e) {
-          console.log('1', e);
-        }
-      } else if (repo) {
-        try {
-          const repository = await client.contentRepositories.get(repo);
+      const contentRepositories = await (repoId != null
+        ? Promise.all(repoIds.map(id => client.contentRepositories.get(id)))
+        : paginator(hub.related.contentRepositories.list));
 
-          contentItems = await paginator(repository.related.contentItems.list, { status: 'ACTIVE' });
-        } catch (e) {
-          console.log('2', e);
-        }
-      } else {
-        try {
-          const hub = await client.hubs.get(hubId);
-          const contentRepositories = await paginator(hub.related.contentRepositories.list);
+      const folders = folderId != null ? await Promise.all(folderIds.map(id => client.folders.get(id))) : [];
 
-          await Promise.all(
-            contentRepositories.map(async contentRepository => {
-              const items = await paginator(contentRepository.related.contentItems.list, { status: 'ACTIVE' });
-              contentItems = contentItems.concat(items);
+      folderId != null
+        ? await Promise.all(
+            folders.map(async source => {
+              const items = await paginator(source.related.contentItems.list);
+
+              Array.prototype.push.apply(
+                contentItems,
+                items.filter(item => item.status == 'ACTIVE')
+              );
+            })
+          )
+        : await Promise.all(
+            contentRepositories.map(async source => {
+              const items = await paginator(source.related.contentItems.list, { status: 'ACTIVE' });
+              Array.prototype.push.apply(contentItems, items);
             })
           );
-        } catch (e) {
-          console.log('3', e);
-        }
-      }
     } catch (e) {
       console.log(
         `Fatal error: could not retrieve content items to archive. Is your repo ID correct? Error: \n${e.toString()}`
@@ -176,7 +173,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
 
   console.log('The following content items will be archived:');
   contentItems.forEach(contentItem => {
-    // console.log(` ${contentItem.label} (${contentItem.id})`);
+    console.log(` ${contentItem.label} (${contentItem.id})`);
   });
   console.log(`Total: ${contentItems.length}`);
 
@@ -215,7 +212,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     }
   }
 
-  if (!silent) {
+  if (!silent && logFile) {
     await log.writeToFile(logFile.replace('<DATE>', timestamp));
   }
 

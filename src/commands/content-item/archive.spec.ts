@@ -1,12 +1,9 @@
 import { builder, command, handler, LOG_FILENAME } from './archive';
 import dynamicContentClientFactory from '../../services/dynamic-content-client-factory';
-import { ContentType, Hub } from 'dc-management-sdk-js';
+import { ContentRepository, ContentItem, Folder } from 'dc-management-sdk-js';
 import Yargs from 'yargs/yargs';
-import MockPage from '../../common/dc-management-sdk-js/mock-page';
-import { exists, readFile, unlink, mkdir, writeFile } from 'fs';
-import { dirname } from 'path';
-import { promisify } from 'util';
 import readline from 'readline';
+import MockPage from '../../common/dc-management-sdk-js/mock-page';
 
 jest.mock('readline');
 
@@ -92,6 +89,191 @@ describe('content-item archive command', () => {
     });
   });
 
+  const mockValues = (archiveError = false) => {
+    const mockGet = jest.fn();
+    const mockGetList = jest.fn();
+    const mockItemsList = jest.fn();
+    const mockArchive = jest.fn();
+    const mockItemGetById = jest.fn();
+    const mockRepoGet = jest.fn();
+    const mockFolderGet = jest.fn();
+
+    (dynamicContentClientFactory as jest.Mock).mockReturnValue({
+      hubs: {
+        get: mockGet
+      },
+      contentRepositories: {
+        get: mockRepoGet
+      },
+      contentItems: {
+        get: mockItemGetById
+      },
+      folders: {
+        get: mockFolderGet
+      }
+    });
+
+    mockFolderGet.mockResolvedValue(
+      new Folder({
+        name: 'folder1',
+        id: 'folder1',
+        client: {
+          fetchLinkedResource: mockItemsList
+        },
+        _links: {
+          'content-items': {
+            href:
+              'https://api.amplience.net/v2/content/content-repositories/repo1/content-items{?folderId,page,projection,size,sort,status}',
+            templated: true
+          }
+        },
+        related: {
+          contentItems: {
+            list: mockItemsList
+          }
+        }
+      })
+    );
+
+    mockGet.mockResolvedValue({
+      id: 'hub-id',
+      related: {
+        contentRepositories: {
+          list: mockGetList
+        }
+      }
+    });
+
+    mockGetList.mockResolvedValue(
+      new MockPage(ContentRepository, [
+        new ContentRepository({
+          name: 'repo1',
+          client: {
+            fetchLinkedResource: mockItemsList
+          },
+          _links: {
+            'content-items': {
+              href:
+                'https://api.amplience.net/v2/content/content-repositories/repo1/content-items{?folderId,page,projection,size,sort,status}',
+              templated: true
+            }
+          },
+          related: {
+            contentItems: {
+              list: mockItemsList
+            }
+          }
+        })
+      ])
+    );
+
+    mockRepoGet.mockResolvedValue(
+      new ContentRepository({
+        name: 'repo1',
+        client: {
+          fetchLinkedResource: mockItemsList
+        },
+        _links: {
+          'content-items': {
+            href:
+              'https://api.amplience.net/v2/content/content-repositories/repo1/content-items{?folderId,page,projection,size,sort,status}',
+            templated: true
+          }
+        },
+        related: {
+          contentItems: {
+            list: mockItemsList
+          }
+        }
+      })
+    );
+
+    mockItemGetById.mockResolvedValue(
+      new ContentItem({
+        id: '1',
+        label: 'item1',
+        repoId: 'repo1',
+        folderId: 'folder1',
+        status: 'ACTIVE',
+        body: {
+          _meta: {
+            schema: 'http://test.com'
+          }
+        },
+        related: { archive: mockArchive },
+        client: {
+          performActionThatReturnsResource: mockArchive
+        },
+        _links: {
+          archive: {
+            href: 'https://api.amplience.net/v2/content/content-items/1/archive'
+          }
+        }
+      })
+    );
+
+    mockItemsList.mockResolvedValue(
+      new MockPage(ContentItem, [
+        new ContentItem({
+          id: '1',
+          label: 'item1',
+          repoId: 'repo1',
+          folderId: 'folder1',
+          status: 'ACTIVE',
+          body: {
+            _meta: {
+              schema: 'http://test.com'
+            }
+          },
+          related: { archive: mockArchive },
+          client: {
+            performActionThatReturnsResource: mockArchive
+          },
+          _links: {
+            archive: {
+              href: 'https://api.amplience.net/v2/content/content-items/1/archive'
+            }
+          }
+        }),
+        new ContentItem({
+          id: '2',
+          label: 'item2',
+          repoId: 'repo1',
+          folderId: 'folder1',
+          status: 'ACTIVE',
+          body: {
+            _meta: {
+              schema: 'http://test1.com'
+            }
+          },
+          client: {
+            performActionThatReturnsResource: mockArchive
+          },
+          _links: {
+            archive: {
+              href: 'https://api.amplience.net/v2/content/content-items/2/archive'
+            }
+          },
+          related: { archive: mockArchive }
+        })
+      ])
+    );
+
+    if (archiveError) {
+      mockArchive.mockRejectedValue(new Error('Error'));
+    }
+
+    return {
+      mockGet,
+      mockGetList,
+      mockItemsList,
+      mockArchive,
+      mockItemGetById,
+      mockRepoGet,
+      mockFolderGet
+    };
+  };
+
   describe('handler tests', function() {
     const yargArgs = {
       $0: 'test',
@@ -108,12 +290,276 @@ describe('content-item archive command', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (readline as any).setResponses(['y']);
 
+      const { mockGet, mockGetList, mockItemsList, mockArchive } = mockValues();
+
       const argv = {
         ...yargArgs,
         ...config
       };
       await handler(argv);
 
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(2);
+    });
+
+    it('should archive content by id', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockItemGetById } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        id: '1'
+      };
+      await handler(argv);
+
+      expect(mockItemGetById).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(1);
+    });
+
+    it('should archive content by repo id', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockRepoGet } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        repoId: 'repo1'
+      };
+      await handler(argv);
+
+      expect(mockRepoGet).toBeCalledTimes(1);
+      expect(mockArchive).toBeCalledTimes(2);
+    });
+
+    it('should archive content by repo ids', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockRepoGet } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        repoId: ['repo1', 'repo2']
+      };
+      await handler(argv);
+
+      expect(mockRepoGet).toBeCalledTimes(2);
+      expect(mockArchive).toBeCalledTimes(4);
+    });
+
+    it('should archive content by folder id', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockFolderGet, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        folderId: 'folder1'
+      };
+      await handler(argv);
+
+      expect(mockFolderGet).toBeCalledTimes(1);
+      expect(mockItemsList).toBeCalledTimes(1);
+      expect(mockArchive).toBeCalledTimes(2);
+    });
+
+    it('should archive content by folder ids', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockFolderGet, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        folderId: ['folder1', 'folder1']
+      };
+      await handler(argv);
+
+      expect(mockFolderGet).toBeCalledTimes(2);
+      expect(mockItemsList).toBeCalledTimes(2);
+      expect(mockArchive).toBeCalledTimes(4);
+    });
+
+    it('should archive content by name', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockFolderGet, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        folderId: 'folder1',
+        name: 'item1'
+      };
+      await handler(argv);
+
+      expect(mockFolderGet).toBeCalledTimes(1);
+      expect(mockItemsList).toBeCalledTimes(1);
+      expect(mockArchive).toBeCalledTimes(1);
+    });
+
+    it("shouldn't archive content by name", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockArchive, mockFolderGet, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        folderId: 'folder1',
+        name: 'item3'
+      };
+      await handler(argv);
+
+      expect(mockFolderGet).toBeCalledTimes(1);
+      expect(mockItemsList).toBeCalledTimes(1);
+      expect(mockArchive).not.toBeCalled();
+    });
+
+    it("shouldn't archive content, answer no", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['n']);
+
+      const { mockArchive, mockFolderGet, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        folderId: 'folder1',
+        name: 'item1'
+      };
+      await handler(argv);
+
+      expect(mockFolderGet).toBeCalledTimes(1);
+      expect(mockItemsList).toBeCalledTimes(1);
+      expect(mockArchive).not.toBeCalled();
+    });
+
+    it('should archive content by name regexp', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockGet, mockGetList, mockArchive, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        name: '/item/'
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(2);
+    });
+
+    it('should archive content by content type name', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockGet, mockGetList, mockArchive, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        contentType: 'http://test.com'
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(1);
+    });
+
+    it('should archive content by content type regexp', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockGet, mockGetList, mockArchive, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        contentType: '/test/'
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(2);
+    });
+
+    it('should archive content by content type regexp', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockGet, mockGetList, mockArchive, mockItemsList } = mockValues();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        contentType: '/test123/'
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(0);
+    });
+
+    it('should archive content with ignoreError', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockGet, mockGetList, mockArchive, mockItemsList } = mockValues(true);
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        ignoreError: true
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(2);
+    });
+
+    it('should archive content with ignoreError', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockGet, mockGetList, mockArchive, mockItemsList } = mockValues(true);
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        ignoreError: false
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockGetList).toHaveBeenCalled();
+      expect(mockItemsList).toHaveBeenCalled();
+      expect(mockArchive).toBeCalledTimes(1);
     });
   });
 });

@@ -1,4 +1,3 @@
-import { join } from 'path';
 import readline, { ReadLine } from 'readline';
 
 function asyncQuestionInternal(rl: ReadLine, question: string): Promise<string> {
