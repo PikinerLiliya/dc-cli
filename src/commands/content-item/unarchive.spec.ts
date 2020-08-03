@@ -89,7 +89,17 @@ describe('content-item unarchive command', () => {
     });
   });
 
-  const mockValues = (unarchiveError = false) => {
+  const mockValues = (
+    unarchiveError = false
+  ): {
+    mockGet: () => void;
+    mockGetList: () => void;
+    mockItemsList: () => void;
+    mockUnarchive: () => void;
+    mockItemGetById: () => void;
+    mockRepoGet: () => void;
+    mockFolderGet: () => void;
+  } => {
     const mockGet = jest.fn();
     const mockGetList = jest.fn();
     const mockItemsList = jest.fn();

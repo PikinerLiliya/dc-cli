@@ -30,8 +30,7 @@ export const builder = (yargs: Argv): void => {
     })
     .option('folderId', {
       type: 'string',
-      describe: 'The ID of a folder to search items in to be archived.',
-      requiresArg: false
+      describe: 'The ID of a folder to search items in to be archived.'
     })
     .option('name', {
       type: 'string',

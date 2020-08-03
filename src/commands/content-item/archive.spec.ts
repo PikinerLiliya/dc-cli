@@ -40,8 +40,7 @@ describe('content-item archive command', () => {
 
       expect(spyOption).toHaveBeenCalledWith('folderId', {
         type: 'string',
-        describe: 'The ID of a folder to search items in to be archived.',
-        requiresArg: false
+        describe: 'The ID of a folder to search items in to be archived.'
       });
 
       expect(spyOption).toHaveBeenCalledWith('name', {
@@ -89,7 +88,17 @@ describe('content-item archive command', () => {
     });
   });
 
-  const mockValues = (archiveError = false) => {
+  const mockValues = (
+    archiveError = false
+  ): {
+    mockGet: () => void;
+    mockGetList: () => void;
+    mockItemsList: () => void;
+    mockArchive: () => void;
+    mockItemGetById: () => void;
+    mockRepoGet: () => void;
+    mockFolderGet: () => void;
+  } => {
     const mockGet = jest.fn();
     const mockGetList = jest.fn();
     const mockItemsList = jest.fn();
