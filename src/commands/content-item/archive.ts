@@ -157,7 +157,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
       const itemsArray: string[] = Array.isArray(contentType) ? contentType : [contentType];
       contentItems = contentItems.filter(item => {
         if (item && item.body && item.body._meta) {
-          return itemsArray.findIndex(id => equalsOrRegex(item.body._meta.schema || '', id)) != -1;
+          return itemsArray.findIndex(id => equalsOrRegex(item.body._meta.schema, id)) != -1;
         }
       });
     } else {
