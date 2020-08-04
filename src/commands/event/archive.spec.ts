@@ -4,6 +4,8 @@ import { Event, Edition, Hub } from 'dc-management-sdk-js';
 import Yargs from 'yargs/yargs';
 import readline from 'readline';
 import MockPage from '../../common/dc-management-sdk-js/mock-page';
+import { promisify } from 'util';
+import { exists, readFile, unlink } from 'fs';
 
 jest.mock('readline');
 
@@ -261,7 +263,8 @@ describe('event archive command', () => {
     const yargArgs = {
       $0: 'test',
       _: ['test'],
-      json: true
+      json: true,
+      silent: true
     };
     const config = {
       clientId: 'client-id',
@@ -505,6 +508,54 @@ describe('event archive command', () => {
       expect(mockEditionsList).not.toHaveBeenCalled();
       expect(deleteMock).not.toHaveBeenCalled();
       expect(archiveMock).not.toHaveBeenCalled();
+    });
+
+    it('should archive events and write log file', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const { mockEditionsList, deleteMock, mockGet } = mockValues({
+        status: 'DRAFT'
+      });
+
+      const logFile = 'tmp/event-archive.log';
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        logFile,
+        silent: false,
+        id: '1'
+      };
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockEditionsList).toHaveBeenCalled();
+      expect(deleteMock).toHaveBeenCalled();
+
+      const logExists = await promisify(exists)(logFile);
+
+      expect(logExists).toBeTruthy();
+
+      const log = await promisify(readFile)(logFile, 'utf8');
+
+      const logLines = log.split('\n');
+      let total = 0;
+      logLines.forEach(line => {
+        if (line.indexOf('DELETE') !== -1) {
+          total++;
+        }
+      });
+
+      expect(total).toEqual(1);
+
+      await promisify(unlink)(logFile);
+    });
+
+    it('should return event file name', async () => {
+      const logFile = LOG_FILENAME();
+
+      expect(logFile).toContain('event-archive-<DATE>.log');
     });
   });
 });
