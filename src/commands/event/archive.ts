@@ -64,7 +64,6 @@ const getEventUntilSuccess = async ({
   let resourceObject;
 
   for (let i = 0; i < 200; i++) {
-    console.log('try ' + i);
     const event = await client.events.get(id);
     if (event._links && event._links[resource]) {
       resourceObject = event._links[resource];
@@ -253,7 +252,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     await log.writeToFile(logFile.replace('<DATE>', timestamp));
   }
 
-  console.log(`Precessed ${successCount} events.`);
+  console.log(`Processed ${successCount} events.`);
 };
 
 // log format:
