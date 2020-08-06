@@ -177,7 +177,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
         console.log(`   ARCHIVE: ${name}`);
       });
       unscheduleEditions.forEach(({ name }) => {
-        console.log(`   UNCHEDULE: ${name}`);
+        console.log(`   UNSCHEDULE: ${name}`);
       });
     }
   });
