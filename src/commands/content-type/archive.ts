@@ -96,8 +96,8 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
       try {
         const log = await new ArchiveLog().loadFromFile(revertLog);
         const ids = log.getData('UNARCHIVE');
-        types = types.filter(type => ids.indexOf(type.id as string) != -1);
-        if (types.length != ids.length) {
+        types = types.filter(type => ids.indexOf(type.id as string) !== -1);
+        if (types.length !== ids.length) {
           missingContent = true;
         }
       } catch (e) {
@@ -107,7 +107,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     } else if (schemaId != null) {
       const schemaIdArray: string[] = Array.isArray(schemaId) ? schemaId : [schemaId];
       types = types.filter(
-        type => schemaIdArray.findIndex(id => equalsOrRegex(type.contentTypeUri as string, id)) != -1
+        type => schemaIdArray.findIndex(id => equalsOrRegex(type.contentTypeUri as string, id)) !== -1
       );
     } else {
       allContent = true;
@@ -115,7 +115,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     }
   }
 
-  if (types.length == 0) {
+  if (types.length === 0) {
     console.log('Nothing found to archive, aborting.');
     return;
   }
@@ -160,7 +160,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     }
   }
 
-  if (!silent && logFile) {
+  if (!silent) {
     await log.writeToFile(logFile.replace('<DATE>', timestamp));
   }
 

@@ -2,22 +2,25 @@ import { Arguments, Argv } from 'yargs';
 import { ConfigurationParameters } from '../configure';
 import dynamicContentClientFactory from '../../services/dynamic-content-client-factory';
 import { FileLog } from '../../common/file-log';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { equalsOrRegex } from '../../common/filter/filter';
 import sanitize from 'sanitize-filename';
 import { uniqueFilenamePath, writeJsonToFile } from '../../services/export.service';
 
-import { mkdir, writeFile, exists, lstat } from 'fs';
-import { promisify } from 'util';
 import { ExportItemBuilderOptions } from '../../interfaces/export-item-builder-options.interface';
 import paginator from '../../common/dc-management-sdk-js/paginator';
 import { ContentItem, Folder, DynamicContent, Hub, ContentRepository } from 'dc-management-sdk-js';
 
 import { ensureDirectoryExists } from '../../common/import/directory-utils';
-import { ContentDependancyTree } from '../../common/content-item/content-dependancy-tree';
+import { ContentDependancyTree, RepositoryContentItem } from '../../common/content-item/content-dependancy-tree';
 import { ContentMapping } from '../../common/content-item/content-mapping';
 import { getDefaultLogPath } from '../../common/log-helpers';
-import { AmplienceSchemaValidator } from '../../common/content-item/amplience-schema-validator';
+import { AmplienceSchemaValidator, defaultSchemaLookup } from '../../common/content-item/amplience-schema-validator';
+
+interface PublishedContentItem {
+  lastPublishedVersion?: number;
+  lastPublishedDate?: string;
+}
 
 export const command = 'export <dir>';
 
@@ -53,6 +56,11 @@ export const builder = (yargs: Argv): void => {
       describe:
         'Export content with a given or matching Name. A regex can be provided, surrounded with forward slashes. Can be used in combination with other filters.'
     })
+    .option('publish', {
+      type: 'boolean',
+      boolean: true,
+      describe: 'When available, export the last published version of a content item rather than its newest version.'
+    })
     .option('logFile', {
       type: 'string',
       default: LOG_FILENAME,
@@ -60,41 +68,13 @@ export const builder = (yargs: Argv): void => {
     });
 };
 
-export const writeItemBody = async (filename: string, body?: string): Promise<void> => {
-  if (!body) {
-    return;
-  }
-
-  const dir = dirname(filename);
-  if (await promisify(exists)(dir)) {
-    const dirStat = await promisify(lstat)(dir);
-    if (!dirStat || !dirStat.isDirectory()) {
-      throw new Error(`Unable to write schema to "${filename}" as "${dir}" is not a directory.`);
-    }
-  } else {
-    try {
-      await promisify(mkdir)(dir);
-    } catch {
-      throw new Error(`Unable to create directory: "${dir}".`);
-    }
-  }
-
-  try {
-    await promisify(writeFile)(filename, body);
-  } catch {
-    throw new Error(`Unable to write file: "${filename}".`);
-  }
-};
-
 const getOrAddFolderPath = async (
   folderToPathMap: Map<string, string>,
   client: DynamicContent,
-  folderOrId: Folder | string | undefined,
-  log: FileLog,
-  baseDir?: string
+  folder: Folder,
+  log: FileLog
 ): Promise<string> => {
-  if (folderOrId == null) return '';
-  const id = typeof folderOrId === 'string' ? folderOrId : (folderOrId.id as string);
+  const id = folder.id as string;
 
   const mapResult = folderToPathMap.get(id);
   if (mapResult !== undefined) {
@@ -102,8 +82,6 @@ const getOrAddFolderPath = async (
   }
 
   // Build the path for this folder.
-  const folder = typeof folderOrId === 'string' ? await client.folders.get(folderOrId) : folderOrId;
-
   const name = sanitize(folder.name as string);
   let path: string;
   try {
@@ -115,32 +93,8 @@ const getOrAddFolderPath = async (
     path = `${name}`;
   }
 
-  if (baseDir != null) {
-    path = join(baseDir, path);
-  }
-
   folderToPathMap.set(id, path);
   return path;
-};
-
-export const filterContentItemsBySchemaId = (
-  listToFilter: ContentItem[],
-  listToMatch: string[] = []
-): ContentItem[] => {
-  if (listToMatch.length === 0) {
-    return listToFilter;
-  }
-
-  const unmatchedIdList: string[] = listToMatch.filter(id => !listToFilter.some(item => item.body._meta.schema === id));
-  if (unmatchedIdList.length > 0) {
-    throw new Error(
-      `Content matching the following schema ID(s) could not be found: [${unmatchedIdList
-        .map(u => `'${u}'`)
-        .join(', ')}].\nNothing was exported, exiting.`
-    );
-  }
-
-  return listToFilter.filter(item => listToMatch.some(id => item.body._meta.schema === id));
 };
 
 const getContentItems = async (
@@ -150,7 +104,8 @@ const getContentItems = async (
   dir: string,
   log: FileLog,
   repoId?: string | string[],
-  folderId?: string | string[]
+  folderId?: string | string[],
+  publish?: boolean
 ): Promise<{ path: string; item: ContentItem }[]> => {
   const items: { path: string; item: ContentItem }[] = [];
 
@@ -189,10 +144,7 @@ const getContentItems = async (
       continue;
     }
 
-    Array.prototype.push.apply(
-      items,
-      newItems.map(item => ({ item, path: baseDir }))
-    );
+    Array.prototype.push.apply(items, newItems.map(item => ({ item, path: baseDir })));
   }
 
   const parallelism = 10;
@@ -229,10 +181,7 @@ const getContentItems = async (
             return;
           }
         }
-        Array.prototype.push.apply(
-          items,
-          newItems.map(item => ({ item, path: path }))
-        );
+        Array.prototype.push.apply(items, newItems.map(item => ({ item, path: path })));
 
         try {
           const subfolders = await paginator(folder.related.folders.list);
@@ -248,21 +197,34 @@ const getContentItems = async (
     baseFolder = false;
     processFolders = nextFolders.splice(0, Math.min(nextFolders.length, parallelism));
   }
+
+  if (publish) {
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      const publishedVersion: number | undefined = (item.item as PublishedContentItem).lastPublishedVersion;
+      if (publishedVersion != null && publishedVersion != item.item.version) {
+        const newVersion = await item.item.related.contentItemVersion(publishedVersion);
+        item.item = newVersion;
+      }
+    }
+  }
+
   return items;
 };
 
 export const handler = async (argv: Arguments<ExportItemBuilderOptions & ConfigurationParameters>): Promise<void> => {
-  const { dir, repoId, folderId, schemaId, name, logFile } = argv;
+  const { dir, repoId, folderId, schemaId, name, logFile, publish } = argv;
 
   const dummyRepo = new ContentRepository();
 
   const folderToPathMap: Map<string, string> = new Map();
   const client = dynamicContentClientFactory(argv);
-  const log = new FileLog(logFile);
+  const log = typeof logFile === 'string' || logFile == null ? new FileLog(logFile) : logFile;
   const hub = await client.hubs.get(argv.hubId);
 
   log.appendLine('Retrieving content items, please wait.');
-  let items = await getContentItems(folderToPathMap, client, hub, dir, log, repoId, folderId);
+  let items = await getContentItems(folderToPathMap, client, hub, dir, log, repoId, folderId, publish);
 
   // Filter using the schemaId and name, if present.
   if (schemaId != null) {
@@ -279,43 +241,66 @@ export const handler = async (argv: Arguments<ExportItemBuilderOptions & Configu
   }
 
   log.appendLine('Scanning for dependancies.');
-  const tree = new ContentDependancyTree(
-    items.map(item => ({ repo: dummyRepo, content: item.item })),
-    new ContentMapping()
-  );
+
+  const repoItems: RepositoryContentItem[] = items.map(item => ({ repo: dummyRepo, content: item.item }));
 
   const missingIDs = new Set<string>();
-  const invalidContentItems = tree.filterAny(item => {
-    const missingDeps = item.dependancies.filter(dep => !tree.byId.has(dep.dependancy.id as string));
-    missingDeps.forEach(dep => {
-      if (dep.dependancy.id != null) {
-        missingIDs.add(dep.dependancy.id);
-      }
-    });
-    return missingDeps.length > 0;
-  });
+  let newMissingIDs: Set<string>;
+  do {
+    const tree = new ContentDependancyTree(repoItems, new ContentMapping());
 
-  if (invalidContentItems) {
+    newMissingIDs = new Set();
+    tree.filterAny(item => {
+      const missingDeps = item.dependancies.filter(dep => !tree.byId.has(dep.dependancy.id as string));
+      missingDeps.forEach(dep => {
+        const id = dep.dependancy.id as string;
+        if (!missingIDs.has(id)) {
+          newMissingIDs.add(id);
+        }
+        missingIDs.add(id);
+      });
+      return missingDeps.length > 0;
+    });
+
+    // Add the newly found content to the items list.
+    const newIdArray = Array.from(newMissingIDs);
+    for (let i = 0; i < newIdArray.length; i++) {
+      try {
+        const item = await client.contentItems.get(newIdArray[i]);
+        // Add this item as a dependancy.
+        repoItems.push({ repo: await item.related.contentRepository(), content: item });
+      } catch {}
+    }
+  } while (newMissingIDs.size > 0);
+
+  if (missingIDs.size > 0) {
     // There are missing content items. We'll need to fetch them and see what their deal is.
     const missingIdArray = Array.from(missingIDs);
+
+    const allRepo = repoId == null && folderId == null;
+
     for (let i = 0; i < missingIdArray.length; i++) {
-      let item: ContentItem | null = null;
+      const repoItem = repoItems.find(ri => ri.content.id == missingIdArray[i]);
 
-      try {
-        item = await client.contentItems.get(missingIdArray[i]);
-      } catch {}
+      if (repoItem != null) {
+        // The item is active and should probably be included.
+        const item = repoItem.content;
+        let path = '_dependancies/';
 
-      if (item != null) {
-        if (item.status === 'ACTIVE') {
-          // The item is active and should probably be included.
-          const path = '_dependancies/';
-          items.push({ item, path });
+        if (allRepo) {
+          // Find the repository for this item.
+          const repo = repoItem.repo;
 
-          log.appendLine(`Referenced content '${item.label}' added to the export.`);
-        } else {
-          // The item is archived and should not be included. Make a note to the user.
-          log.appendLine(`Referenced content '${item.label}' is archived, so was not exported.`);
+          path = join(sanitize(repo.label as string), path);
         }
+
+        items.push({ item, path });
+
+        log.appendLine(
+          item.status === 'ACTIVE'
+            ? `Referenced content '${item.label}' added to the export.`
+            : `Referenced content '${item.label}' is archived, but is needed as a dependancy. It has been added to the export.`
+        );
       } else {
         log.appendLine(`Referenced content ${missingIdArray[i]} does not exist.`);
       }
@@ -326,17 +311,20 @@ export const handler = async (argv: Arguments<ExportItemBuilderOptions & Configu
   const filenames: string[] = [];
 
   const schemas = await paginator(hub.related.contentTypeSchema.list);
+  const types = await paginator(hub.related.contentTypes.list);
 
-  const validator = new AmplienceSchemaValidator(schemas);
+  const validator = new AmplienceSchemaValidator(defaultSchemaLookup(types, schemas));
 
   for (let i = 0; i < items.length; i++) {
     const { item, path } = items[i];
 
     try {
-      if (!(await validator.validate(item.body))) {
+      const errors = await validator.validate(item.body);
+      if (errors.length > 0) {
         log.appendLine(
           `WARNING: ${item.label} does not validate under the available schema. It may not import correctly.`
         );
+        log.appendLine(JSON.stringify(errors, null, 2));
       }
     } catch (e) {
       log.appendLine(`WARNING: Could not validate ${item.label} as there is a problem with the schema: ${e}`);

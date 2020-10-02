@@ -1,6 +1,7 @@
 import { Arguments, Argv } from 'yargs';
 import { ConfigurationParameters } from '../configure';
 import dynamicContentClientFactory from '../../services/dynamic-content-client-factory';
+import { revert } from './import-revert';
 import { FileLog } from '../../common/file-log';
 import { dirname, basename, join, relative, resolve, extname } from 'path';
 
@@ -25,8 +26,9 @@ import {
 } from '../../common/content-item/content-dependancy-tree';
 
 import { asyncQuestion } from '../../common/archive/archive-helpers';
-import { AmplienceSchemaValidator } from '../../common/content-item/amplience-schema-validator';
+import { AmplienceSchemaValidator, defaultSchemaLookup } from '../../common/content-item/amplience-schema-validator';
 import { getDefaultLogPath } from '../../common/log-helpers';
+import { PublishQueue } from '../../common/import/publish-queue';
 
 export function getDefaultMappingPath(name: string, platform: string = process.platform): string {
   return join(
@@ -90,6 +92,18 @@ export const builder = (yargs: Argv): void => {
       type: 'boolean',
       boolean: true,
       describe: 'Skip any content items that has one or more missing dependancy.'
+    })
+
+    .option('publish', {
+      type: 'boolean',
+      boolean: true,
+      describe: 'Publish any content items that have an existing publish status in their JSON.'
+    })
+
+    .option('republish', {
+      type: 'boolean',
+      boolean: true,
+      describe: 'Republish content items regardless of whether the import changed them or not. (--publish not required)'
     })
 
     .option('logFile', {
@@ -189,12 +203,17 @@ const traverseRecursive = async (path: string, action: (path: string) => Promise
   );
 };
 
+interface ContentImportResult {
+  newItem: ContentItem;
+  oldVersion: number;
+}
+
 const createOrUpdateContent = async (
   client: DynamicContent,
   repo: ContentRepository,
   existing: string | ContentItem | null,
   item: ContentItem
-): Promise<{ newItem: ContentItem; updated: boolean }> => {
+): Promise<ContentImportResult> => {
   let oldItem: ContentItem | null = null;
   if (typeof existing === 'string') {
     oldItem = await client.contentItems.get(existing);
@@ -202,12 +221,26 @@ const createOrUpdateContent = async (
     oldItem = existing;
   }
 
+  let result: ContentImportResult;
+
   if (oldItem == null) {
-    return { newItem: await repo.related.contentItems.create(item), updated: false };
+    result = { newItem: await repo.related.contentItems.create(item), oldVersion: 0 };
   } else {
+    const oldVersion = oldItem.version || 0;
     item.version = oldItem.version;
-    return { newItem: await oldItem.related.update(item), updated: true };
+    result = { newItem: await oldItem.related.update(item), oldVersion };
   }
+
+  if (item.locale != null && result.newItem.locale != item.locale) {
+    await result.newItem.related.setLocale(item.locale);
+  }
+
+  return result;
+};
+
+const itemShouldPublish = (item: ContentItem): boolean => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (item as any).publish; // Added when creating the filtered content.
 };
 
 const trySaveMapping = async (mapFile: string | undefined, mapping: ContentMapping, log: FileLog): Promise<void> => {
@@ -316,9 +349,11 @@ const prepareContentForImport = async (
       const filteredContent = {
         id: contentJSON.id,
         label: contentJSON.label,
+        locale: contentJSON.locale,
         body: contentJSON.body,
         deliveryId: contentJSON.deliveryId == contentJSON.Id ? undefined : contentJSON.deliveryId,
-        folderId: folder == null ? null : folder.id
+        folderId: folder == null ? null : folder.id,
+        publish: contentJSON.lastPublishedVersion != null
       };
 
       schemaNames.add(contentJSON.body._meta.schema);
@@ -515,19 +550,19 @@ const prepareContentForImport = async (
     if (skipIncomplete) {
       tree.removeContent(invalidContentItems);
     } else {
-      const validator = new AmplienceSchemaValidator(schemas);
+      const validator = new AmplienceSchemaValidator(defaultSchemaLookup(types, schemas));
 
       const mustSkip: ItemContentDependancies[] = [];
       await Promise.all(
         invalidContentItems.map(async item => {
-          tree.removeContentDependancies(
-            item.owner,
+          tree.removeContentDependanciesFromBody(
             item.owner.content.body,
             item.dependancies.map(dependancy => dependancy.dependancy)
           );
 
           try {
-            if (!(await validator.validate(item.owner.content.body))) {
+            const errors = await validator.validate(item.owner.content.body);
+            if (errors.length > 0) {
               mustSkip.push(item);
             }
           } catch {
@@ -583,11 +618,14 @@ const importTree = async (
   client: DynamicContent,
   tree: ContentDependancyTree,
   mapping: ContentMapping,
-  log: FileLog
+  log: FileLog,
+  argv: Arguments<ImportItemBuilderOptions & ConfigurationParameters>
 ): Promise<boolean> => {
   const abort = (error: Error): void => {
     log.appendLine(`Importing content item failed, aborting. Error: ${error.toString()}`);
   };
+
+  let publishable: { item: ContentItem; node: ItemContentDependancies }[] = [];
 
   for (let i = 0; i < tree.levels.length; i++) {
     const level = tree.levels[i];
@@ -605,7 +643,7 @@ const importTree = async (
       content.id = mapping.getContentItem(content.id as string);
 
       let newItem: ContentItem;
-      let updated: boolean;
+      let oldVersion: number;
       try {
         const result = await createOrUpdateContent(
           client,
@@ -614,17 +652,47 @@ const importTree = async (
           content
         );
         newItem = result.newItem;
-        updated = result.updated;
+        oldVersion = result.oldVersion;
       } catch (e) {
         log.appendLine(`Failed creating ${content.label}.`);
         abort(e);
         return false;
       }
 
-      log.appendLine(`${updated ? 'Updated' : 'Created'} ${content.label}.`);
+      const updated = oldVersion > 0;
+      log.addComment(`${updated ? 'Updated' : 'Created'} ${content.label}.`);
+      log.addAction(
+        updated ? 'UPDATE' : 'CREATE',
+        (newItem.id || 'unknown') + (updated ? ` ${oldVersion} ${newItem.version}` : '')
+      );
+
+      if (itemShouldPublish(content) && (newItem.version != oldVersion || argv.republish)) {
+        publishable.push({ item: newItem, node: item });
+      }
+
       mapping.registerContentItem(originalId as string, newItem.id as string);
     }
   }
+
+  // Filter publishables to remove items that will be published as part of another publish.
+  // Cuts down on unnecessary requests.
+  let publishChildren = 0;
+
+  publishable = publishable.filter(entry => {
+    let isTopLevel = true;
+
+    tree.traverseDependants(entry.node, dependant => {
+      if (dependant != entry.node && publishable.findIndex(entry => entry.node === dependant) !== -1) {
+        isTopLevel = false;
+      }
+    });
+
+    if (!isTopLevel) {
+      publishChildren++;
+    }
+
+    return isTopLevel;
+  });
 
   // Create circular dependancies with all the mappings we have, and update the mapping.
   // Do a second pass that updates the existing assets to point to the new ones.
@@ -646,6 +714,7 @@ const importTree = async (
       content.id = mapping.getContentItem(content.id);
 
       let newItem: ContentItem;
+      let oldVersion: number;
       try {
         const result = await createOrUpdateContent(
           client,
@@ -654,33 +723,74 @@ const importTree = async (
           content
         );
         newItem = result.newItem;
+        oldVersion = result.oldVersion;
       } catch (e) {
         log.appendLine(`Failed creating ${content.label}.`);
         abort(e);
         return false;
       }
 
-      log.appendLine(`Processed ${content.label}.`);
-
       if (pass === 0) {
         // New mappings are created in the first pass, they are only propagated in the second.
+        const updated = oldVersion > 0;
+        log.addComment(`${updated ? 'Updated' : 'Created'} ${content.label}.`);
+        log.addAction(
+          updated ? 'UPDATE' : 'CREATE',
+          (newItem.id || 'unknown') + (updated ? ` ${oldVersion} ${newItem.version}` : '')
+        );
+
         newDependants[i] = newItem;
         mapping.registerContentItem(originalId as string, newItem.id as string);
+      } else {
+        if (itemShouldPublish(content) && (newItem.version != oldVersion || argv.republish)) {
+          publishable.push({ item: newItem, node: item });
+        }
       }
     }
+  }
+
+  if (argv.publish) {
+    const pubQueue = new PublishQueue(argv);
+    log.appendLine(`Publishing ${publishable.length} items. (${publishChildren} children included)`);
+
+    for (let i = 0; i < publishable.length; i++) {
+      const item = publishable[i].item;
+
+      try {
+        await pubQueue.publish(item);
+        log.appendLine(`Started publish for ${item.label}.`);
+      } catch (e) {
+        log.appendLine(`Failed to initiate publish for ${item.label}: ${e.toString()}`);
+      }
+    }
+
+    log.appendLine(`Waiting for all publishes to complete...`);
+    await pubQueue.waitForAll();
+
+    log.appendLine(`Finished publishing, with ${pubQueue.failedJobs.length} failed publishes total.`);
+    pubQueue.failedJobs.forEach(job => {
+      log.appendLine(` - ${job.item.label}`);
+    });
   }
 
   log.appendLine('Done!');
   return true;
 };
 
-export const handler = async (argv: Arguments<ImportItemBuilderOptions & ConfigurationParameters>): Promise<void> => {
+export const handler = async (
+  argv: Arguments<ImportItemBuilderOptions & ConfigurationParameters>
+): Promise<boolean> => {
+  if (argv.revertLog != null) {
+    return revert(argv);
+  }
+
   const { dir, baseRepo, baseFolder, validate, logFile } = argv;
   const force = argv.force || false;
   let { mapFile } = argv;
+  argv.publish = argv.publish || argv.republish;
 
   const client = dynamicContentClientFactory(argv);
-  const log = new FileLog(logFile);
+  const log = typeof logFile === 'string' || logFile == null ? new FileLog(logFile) : logFile;
 
   let hub: Hub;
   try {
@@ -688,7 +798,7 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
   } catch (e) {
     console.error(`Couldn't get hub: ${e.toString()}`);
     log.close();
-    return;
+    return false;
   }
 
   let importTitle = 'unknownImport';
@@ -722,7 +832,7 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
     } catch (e) {
       console.error(`Couldn't get base folder: ${e.toString()}`);
       log.close();
-      return;
+      return false;
     }
     tree = await prepareContentForImport(client, hub, [{ repo, basePath: dir }], folder, mapping, log, argv);
   } else if (baseRepo != null) {
@@ -732,7 +842,7 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
     } catch (e) {
       console.error(`Couldn't get base repository: ${e.toString()}`);
       log.close();
-      return;
+      return false;
     }
     tree = await prepareContentForImport(client, hub, [{ repo, basePath: dir }], null, mapping, log, argv);
   } else {
@@ -743,7 +853,7 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
     } catch (e) {
       log.appendLine(`Couldn't get repositories: ${e.toString()}`);
       log.close();
-      return;
+      return false;
     }
 
     const baseDirContents = await promisify(readdir)(dir);
@@ -779,7 +889,7 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
           ));
         if (!ignore) {
           log.close();
-          return;
+          return false;
         }
       }
     }
@@ -787,15 +897,17 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
     if (importRepos.length == 0) {
       log.appendLine('Could not find any matching repositories to import into, aborting.');
       log.close();
-      return;
+      return false;
     }
 
     tree = await prepareContentForImport(client, hub, importRepos, null, mapping, log, argv);
   }
 
+  let result = true;
+
   if (tree != null) {
     if (!validate) {
-      await importTree(client, tree, mapping, log);
+      result = await importTree(client, tree, mapping, log, argv);
     } else {
       log.appendLine('--validate was passed, so no content was imported.');
     }
@@ -803,4 +915,5 @@ export const handler = async (argv: Arguments<ImportItemBuilderOptions & Configu
 
   trySaveMapping(mapFile, mapping, log);
   log.close();
+  return result;
 };
