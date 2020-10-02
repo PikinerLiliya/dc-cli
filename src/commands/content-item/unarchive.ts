@@ -119,10 +119,7 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
             folders.map(async source => {
               const items = await paginator(source.related.contentItems.list);
 
-              Array.prototype.push.apply(
-                contentItems,
-                items.filter(item => item.status != 'ACTIVE')
-              );
+              Array.prototype.push.apply(contentItems, items.filter(item => item.status != 'ACTIVE'));
             })
           )
         : await Promise.all(
