@@ -107,20 +107,15 @@ export const getEvents = async ({
     const eventsList = await paginator(hub.related.events.list);
     let events: Event[] = eventsList;
 
-    console.log(eventsList);
     if (name != null) {
       const itemsArray: string[] = Array.isArray(name) ? name : [name];
       events = eventsList.filter(
         ({ name: eventName }) =>
           itemsArray.findIndex(id => {
-            console.log(id);
-            console.log(eventName);
             return equalsOrRegex(eventName || '', id);
           }) != -1
       );
     }
-
-    console.log(events);
 
     return await Promise.all(
       events.map(async event => ({
@@ -224,22 +219,16 @@ export const processItems = async ({
           client
         });
 
-        console.log(resource);
-
         if (!resource) {
           log.addComment(`${events[i].command} FAILED: ${events[i].event.id}`);
           log.addComment(`You don't have access to perform this action, try again later or contact support.`);
         }
 
-        console.log(events[i].command);
-
         if (events[i].command === 'DELETE') {
-          console.log('here 1');
           resource && (await resource.related.delete());
           log.addAction(events[i].command, `${events[i].event.id}\n`);
           successCount++;
         } else {
-          console.log('here');
           resource && (await resource.related.archive());
           log.addAction(events[i].command, `${events[i].event.id}\n`);
           successCount++;
@@ -282,8 +271,6 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     hubId,
     name
   });
-
-  console.log(events);
 
   if (events.length == 0) {
     console.log('Nothing found to archive, aborting.');
