@@ -1,4 +1,4 @@
-import { builder, command, handler, LOG_FILENAME } from './archive';
+import { builder, command, handler, LOG_FILENAME, processItems, getEvents } from './archive';
 import dynamicContentClientFactory from '../../services/dynamic-content-client-factory';
 import { Event, Edition, Hub } from 'dc-management-sdk-js';
 import Yargs from 'yargs/yargs';
@@ -15,6 +15,17 @@ describe('event archive command', () => {
   afterEach((): void => {
     jest.restoreAllMocks();
   });
+  const yargArgs = {
+    $0: 'test',
+    _: ['test'],
+    json: true,
+    silent: true
+  };
+  const config = {
+    clientId: 'client-id',
+    clientSecret: 'client-id',
+    hubId: 'hub-id'
+  };
 
   it('should command should defined', function() {
     expect(command).toEqual('archive [id]');
@@ -84,13 +95,17 @@ describe('event archive command', () => {
     (dynamicContentClientFactory as jest.Mock).mockReturnValue({
       client: {
         deleteLinkedResource: deleteMock,
-        createLinkedResource: archiveMock
+        performActionThatReturnsResource: archiveMock
       },
       hubs: {
         get: getHubMock
       },
       events: {
-        get: mockGet
+        get: mockGet,
+        related: {
+          delete: deleteMock,
+          archive: archiveMock
+        }
       }
     });
 
@@ -99,7 +114,9 @@ describe('event archive command', () => {
         name: '1',
         id: '1',
         client: {
-          fetchLinkedResource: mockEventsList
+          fetchLinkedResource: mockEventsList,
+          performActionThatReturnsResource: archiveMock,
+          deleteLinkedResource: deleteMock
         },
         _links: {
           events: {
@@ -121,7 +138,9 @@ describe('event archive command', () => {
           id: 'test1',
           name: 'test1',
           client: {
-            fetchLinkedResource: mockEditionsList
+            fetchLinkedResource: mockEditionsList,
+            performActionThatReturnsResource: archiveMock,
+            deleteLinkedResource: deleteMock
           },
           _links: {
             editions: {
@@ -136,6 +155,8 @@ describe('event archive command', () => {
             }
           },
           related: {
+            delete: deleteMock,
+            archive: archiveMock,
             editions: {
               list: mockEditionsList
             }
@@ -145,7 +166,9 @@ describe('event archive command', () => {
           id: 'test2',
           name: 'test2',
           client: {
-            fetchLinkedResource: mockEditionsList
+            fetchLinkedResource: mockEditionsList,
+            performActionThatReturnsResource: archiveMock,
+            deleteLinkedResource: deleteMock
           },
           _links: {
             editions: {
@@ -160,6 +183,8 @@ describe('event archive command', () => {
             }
           },
           related: {
+            delete: deleteMock,
+            archive: archiveMock,
             editions: {
               list: mockEditionsList
             }
@@ -173,7 +198,9 @@ describe('event archive command', () => {
         name: 'test1',
         id: '1',
         client: {
-          fetchLinkedResource: mockEditionsList
+          fetchLinkedResource: mockEditionsList,
+          performActionThatReturnsResource: archiveMock,
+          deleteLinkedResource: deleteMock
         },
         _links: {
           editions: {
@@ -188,6 +215,8 @@ describe('event archive command', () => {
           }
         },
         related: {
+          delete: deleteMock,
+          archive: archiveMock,
           editions: {
             list: mockEditionsList
           }
@@ -200,6 +229,11 @@ describe('event archive command', () => {
         name: 'ed1',
         id: 'ed1',
         publishingStatus: status,
+        client: {
+          fetchLinkedResource: mockEditionsList,
+          performActionThatReturnsResource: archiveMock,
+          deleteLinkedResource: deleteMock
+        },
         _links: {
           archive: {
             href: 'https://api.amplience.net/v2/content/editions/ed1/archive'
@@ -210,6 +244,10 @@ describe('event archive command', () => {
           schedule: {
             href: 'https://api.amplience.net/v2/content/editions/ed1/schedule'
           }
+        },
+        related: {
+          delete: deleteMock,
+          archive: archiveMock
         }
       })
     ];
@@ -220,6 +258,11 @@ describe('event archive command', () => {
           name: 'ed2',
           id: 'ed2',
           publishingStatus: 'PUBLISHED',
+          client: {
+            fetchLinkedResource: mockEventsList,
+            performActionThatReturnsResource: archiveMock,
+            deleteLinkedResource: deleteMock
+          },
           _links: {
             archive: {
               href: 'https://api.amplience.net/v2/content/editions/ed2/archive'
@@ -260,18 +303,6 @@ describe('event archive command', () => {
   };
 
   describe('handler tests', function() {
-    const yargArgs = {
-      $0: 'test',
-      _: ['test'],
-      json: true,
-      silent: true
-    };
-    const config = {
-      clientId: 'client-id',
-      clientSecret: 'client-id',
-      hubId: 'hub-id'
-    };
-
     it('should delete event with draft edition', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (readline as any).setResponses(['y']);
@@ -353,7 +384,7 @@ describe('event archive command', () => {
       const argv = {
         ...yargArgs,
         ...config,
-        name: '/test*/'
+        name: '/test/'
       };
       await handler(argv);
 
@@ -373,13 +404,13 @@ describe('event archive command', () => {
       const argv = {
         ...yargArgs,
         ...config,
-        name: '/abc*/'
+        name: '/abc/'
       };
       await handler(argv);
 
       expect(getHubMock).toHaveBeenCalled();
       expect(mockEventsList).toHaveBeenCalled();
-      expect(mockEditionsList).toHaveBeenCalled();
+      expect(mockEditionsList).not.toHaveBeenCalled();
       expect(mockGet).not.toHaveBeenCalled();
       expect(deleteMock).not.toHaveBeenCalled();
     });
@@ -469,7 +500,7 @@ describe('event archive command', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (readline as any).setResponses(['y']);
 
-      const { mockEditionsList, deleteMock, archiveMock, mockGet, getHubMock, mockEventsList } = mockValues({
+      const { mockEditionsList, deleteMock, archiveMock, getHubMock, mockEventsList } = mockValues({
         status: 'DRAFT',
         getHubError: true
       });
@@ -556,6 +587,83 @@ describe('event archive command', () => {
       const logFile = LOG_FILENAME();
 
       expect(logFile).toContain('event-archive-<DATE>.log');
+    });
+  });
+
+  describe('getEvents tests', () => {
+    it('should get event by id', async () => {
+      const result = await getEvents({
+        client: dynamicContentClientFactory({
+          ...config,
+          ...yargArgs
+        }),
+        id: '1',
+        hubId: 'hub1'
+      });
+
+      if (result) {
+        expect(result.length).toBeGreaterThanOrEqual(1);
+
+        expect(result[0].event.id).toMatch('1');
+      }
+    });
+
+    it('should get events by name', async () => {
+      const result = await getEvents({
+        client: dynamicContentClientFactory({
+          ...config,
+          ...yargArgs
+        }),
+        hubId: 'hub1',
+        name: '/test/'
+      });
+
+      if (result) {
+        expect(result.length).toBe(2);
+      }
+    });
+
+    it('should archive events, write log file', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      if (await promisify(exists)('temp/event-archive.log')) {
+        await promisify(unlink)('temp/event-archive.log');
+      }
+
+      const { mockGet, mockEditionsList, archiveMock } = mockValues({ status: 'SHCEDULED' });
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        silent: false,
+        logFile: 'temp/event-archive.log',
+        id: '1'
+      };
+
+      await handler(argv);
+
+      expect(mockGet).toHaveBeenCalled();
+      expect(mockEditionsList).toHaveBeenCalled();
+      expect(archiveMock).toHaveBeenCalled();
+
+      const logExists = await promisify(exists)('temp/event-archive.log');
+
+      expect(logExists).toBeTruthy();
+
+      const log = await promisify(readFile)('temp/event-archive.log', 'utf8');
+
+      const logLines = log.split('\n');
+      let total = 0;
+      logLines.forEach(line => {
+        if (line.indexOf('ARCHIVE') !== -1) {
+          total++;
+        }
+      });
+
+      expect(total).toEqual(1);
+
+      await promisify(unlink)('temp/event-archive.log');
     });
   });
 });

@@ -54,38 +54,217 @@ const getEventUntilSuccess = async ({
   id: string;
   resource: string;
   client: DynamicContent;
-}): Promise<
-  | {
-      href: string;
-      templated?: boolean;
-    }
-  | undefined
-> => {
-  let resourceObject;
+}): Promise<Event | undefined> => {
+  let resourceEvent;
 
   for (let i = 0; i < 200; i++) {
-    const event = await client.events.get(id);
+    const event: Event = await client.events.get(id);
     if (event._links && event._links[resource]) {
-      resourceObject = event._links[resource];
+      resourceEvent = event;
       break;
     }
   }
 
-  return resourceObject;
+  return resourceEvent;
 };
 
-export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationParameters>): Promise<void> => {
-  const { id, logFile, force, silent, name, hubId } = argv;
-  const client = dynamicContentClientFactory(argv);
+export const getEvents = async ({
+  id,
+  client,
+  hubId,
+  name
+}: {
+  id?: string;
+  hubId: string;
+  name?: string | string[];
+  client: DynamicContent;
+}): Promise<{
+  event: Event;
+  editions: Edition[];
+  archiveEditions: Edition[];
+  deleteEditions: Edition[];
+  unscheduleEditions: Edition[];
+  command: string;
+}[]> => {
+  try {
+    if (id != null) {
+      const event = await client.events.get(id);
+      const editions = await paginator(event.related.editions.list);
 
-  let events: {
+      return [
+        {
+          event,
+          editions,
+          command: 'ARCHIVE',
+          unscheduleEditions: [],
+          deleteEditions: [],
+          archiveEditions: []
+        }
+      ];
+    }
+
+    const hub = await client.hubs.get(hubId);
+    const eventsList = await paginator(hub.related.events.list);
+    let events: Event[] = eventsList;
+
+    console.log(eventsList);
+    if (name != null) {
+      const itemsArray: string[] = Array.isArray(name) ? name : [name];
+      events = eventsList.filter(
+        ({ name: eventName }) =>
+          itemsArray.findIndex(id => {
+            console.log(id);
+            console.log(eventName);
+            return equalsOrRegex(eventName || '', id);
+          }) != -1
+      );
+    }
+
+    console.log(events);
+
+    return await Promise.all(
+      events.map(async event => ({
+        event,
+        editions: await paginator(event.related.editions.list),
+        command: 'ARCHIVE',
+        unscheduleEditions: [],
+        deleteEditions: [],
+        archiveEditions: []
+      }))
+    );
+  } catch (e) {
+    console.log(e);
+    return [];
+  }
+};
+
+export const processItems = async ({
+  client,
+  events,
+  force,
+  silent,
+  missingContent,
+  logFile
+}: {
+  client: DynamicContent;
+  events: {
     event: Event;
     editions: Edition[];
     archiveEditions: Edition[];
     deleteEditions: Edition[];
     unscheduleEditions: Edition[];
     command: string;
-  }[] = [];
+  }[];
+  force?: boolean;
+  silent?: boolean;
+  logFile?: string;
+  missingContent: boolean;
+  ignoreError?: boolean;
+}) => {
+  try {
+    for (let i = 0; i < events.length; i++) {
+      events[i].deleteEditions = events[i].editions.filter(
+        ({ publishingStatus }) => publishingStatus === 'DRAFT' || publishingStatus === 'UNSCHEDULING'
+      );
+      events[i].unscheduleEditions = events[i].editions.filter(
+        ({ publishingStatus }) => publishingStatus === 'SCHEDULED' || publishingStatus === 'SCHEDULING'
+      );
+      events[i].archiveEditions = events[i].editions.filter(
+        ({ publishingStatus }) => publishingStatus === 'PUBLISHED' || publishingStatus === 'PUBLISHING'
+      );
+
+      if (events[i].deleteEditions.length + events[i].unscheduleEditions.length === events[i].editions.length) {
+        events[i].command = 'DELETE';
+      }
+    }
+
+    console.log('The following events are processing:');
+    events.forEach(({ event, command = '', deleteEditions, unscheduleEditions, archiveEditions }) => {
+      console.log(`${command}: ${event.name} (${event.id})`);
+      if (deleteEditions.length || unscheduleEditions.length) {
+        console.log(' Editions:');
+        deleteEditions.forEach(({ name, id }) => {
+          console.log(`   DELETE: ${name} (${id})`);
+        });
+        archiveEditions.forEach(({ name, id }) => {
+          console.log(`   ARCHIVE: ${name} (${id})`);
+        });
+        unscheduleEditions.forEach(({ name, id }) => {
+          console.log(`   UNSCHEDULE: ${name} (${id})`);
+        });
+      }
+    });
+    console.log(`Total: ${events.length}`);
+
+    if (!force) {
+      const yes = await confirmArchive('perform', 'actions', false, missingContent);
+      if (!yes) {
+        return;
+      }
+    }
+
+    const timestamp = Date.now().toString();
+    const log = new ArchiveLog(`Events Archive Log - ${timestamp}\n`);
+
+    let successCount = 0;
+
+    for (let i = 0; i < events.length; i++) {
+      try {
+        await Promise.all(events[i].unscheduleEditions.map(edition => edition.related.unschedule()));
+
+        if (events[i].command === 'ARCHIVE') {
+          await Promise.all(events[i].deleteEditions.map(edition => edition.related.delete()));
+
+          await Promise.all(events[i].archiveEditions.map(edition => edition.related.archive()));
+        }
+
+        const resource = await getEventUntilSuccess({
+          id: events[i].event.id || '',
+          resource: events[i].command.toLowerCase(),
+          client
+        });
+
+        console.log(resource);
+
+        if (!resource) {
+          log.addComment(`${events[i].command} FAILED: ${events[i].event.id}`);
+          log.addComment(`You don't have access to perform this action, try again later or contact support.`);
+        }
+
+        console.log(events[i].command);
+
+        if (events[i].command === 'DELETE') {
+          console.log('here 1');
+          resource && (await resource.related.delete());
+          log.addAction(events[i].command, `${events[i].event.id}\n`);
+          successCount++;
+        } else {
+          console.log('here');
+          resource && (await resource.related.archive());
+          log.addAction(events[i].command, `${events[i].event.id}\n`);
+          successCount++;
+        }
+      } catch (e) {
+        console.log(e);
+        log.addComment(`${events[i].command} FAILED: ${events[i].event.id}`);
+        log.addComment(e.toString());
+      }
+    }
+
+    if (!silent && logFile) {
+      await log.writeToFile(logFile.replace('<DATE>', timestamp));
+    }
+
+    console.log(`Processed ${successCount} events.`);
+  } catch (e) {
+    return [];
+  }
+};
+
+export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationParameters>): Promise<void> => {
+  const { id, logFile, force, silent, name, hubId } = argv;
+  const client = dynamicContentClientFactory(argv);
+
   const missingContent = false;
 
   if (name && id) {
@@ -97,162 +276,28 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
     return;
   }
 
-  if (id != null) {
-    try {
-      const event = await client.events.get(id);
-      const editions = await paginator(event.related.editions.list);
+  const events = await getEvents({
+    id,
+    client,
+    hubId,
+    name
+  });
 
-      events = [
-        {
-          event,
-          editions,
-          command: 'ARCHIVE',
-          unscheduleEditions: [],
-          deleteEditions: [],
-          archiveEditions: []
-        }
-      ];
-    } catch (e) {
-      console.log(`Fatal error: could not find event with ID ${id}. Error: \n${e.toString()}`);
-      return;
-    }
-  } else {
-    try {
-      const hub = await client.hubs.get(hubId);
-      const eventsList = await paginator(hub.related.events.list);
-
-      events = await Promise.all(
-        eventsList.map(async event => ({
-          event,
-          editions: await paginator(event.related.editions.list),
-          command: 'ARCHIVE',
-          unscheduleEditions: [],
-          deleteEditions: [],
-          archiveEditions: []
-        }))
-      );
-    } catch (e) {
-      console.log(
-        `Fatal error: could not retrieve events to archive. Is your hub ID correct? Error: \n${e.toString()}`
-      );
-      return;
-    }
-
-    if (name != null) {
-      const itemsArray: string[] = Array.isArray(name) ? name : [name];
-      events = events.filter(({ event }) => itemsArray.findIndex(id => equalsOrRegex(event.name || '', id)) != -1);
-    }
-  }
+  console.log(events);
 
   if (events.length == 0) {
     console.log('Nothing found to archive, aborting.');
     return;
   }
 
-  for (let i = 0; i < events.length; i++) {
-    events[i].deleteEditions = events[i].editions.filter(
-      ({ publishingStatus }) => publishingStatus === 'DRAFT' || publishingStatus === 'UNSCHEDULING'
-    );
-    events[i].unscheduleEditions = events[i].editions.filter(
-      ({ publishingStatus }) => publishingStatus === 'SCHEDULED' || publishingStatus === 'SCHEDULING'
-    );
-    events[i].archiveEditions = events[i].editions.filter(
-      ({ publishingStatus }) => publishingStatus === 'PUBLISHED' || publishingStatus === 'PUBLISHING'
-    );
-
-    if (events[i].deleteEditions.length + events[i].unscheduleEditions.length === events[i].editions.length) {
-      events[i].command = 'DELETE';
-    }
-  }
-
-  console.log('The following events are processing:');
-  events.forEach(({ event, command = '', deleteEditions, unscheduleEditions, archiveEditions }) => {
-    console.log(`${command}: ${event.name} (${event.id})`);
-    if (deleteEditions.length || unscheduleEditions.length) {
-      console.log(' Editions:');
-      deleteEditions.forEach(({ name }) => {
-        console.log(`   DELETE: ${name}`);
-      });
-      archiveEditions.forEach(({ name }) => {
-        console.log(`   ARCHIVE: ${name}`);
-      });
-      unscheduleEditions.forEach(({ name }) => {
-        console.log(`   UNSCHEDULE: ${name}`);
-      });
-    }
+  await processItems({
+    client,
+    events,
+    missingContent,
+    logFile,
+    force,
+    silent
   });
-  console.log(`Total: ${events.length}`);
-
-  if (!force) {
-    const yes = await confirmArchive('perform', 'actions', false, missingContent);
-    if (!yes) {
-      return;
-    }
-  }
-
-  const timestamp = Date.now().toString();
-  const log = new ArchiveLog(`Events Archive Log - ${timestamp}\n`);
-
-  let successCount = 0;
-
-  for (let i = 0; i < events.length; i++) {
-    try {
-      await Promise.all(
-        events[i].unscheduleEditions.map(async event => {
-          const uncheduleResource = event._links && event._links.schedule;
-          return uncheduleResource && (await client.client.deleteLinkedResource(uncheduleResource, {}));
-        })
-      );
-
-      if (events[i].command === 'ARCHIVE') {
-        await Promise.all(
-          events[i].deleteEditions.map(async event => {
-            const deleteResource = event._links && event._links.delete;
-            return deleteResource && (await client.client.deleteLinkedResource(deleteResource, {}));
-          })
-        );
-
-        await Promise.all(
-          events[i].archiveEditions.map(async event => {
-            const archiveResource = event._links && event._links.archive;
-            return (
-              archiveResource && (await client.client.createLinkedResource(archiveResource, {}, new Edition(), Edition))
-            );
-          })
-        );
-      }
-
-      const resource = await getEventUntilSuccess({
-        id: events[i].event.id || '',
-        resource: events[i].command.toLowerCase(),
-        client
-      });
-
-      if (!resource) {
-        log.addComment(`${events[i].command} FAILED: ${events[i].event.id}`);
-        log.addComment(`You don't have access to perform this action, try again later or contact support.`);
-      }
-
-      if (events[i].command === 'DELETE') {
-        resource && (await client.client.deleteLinkedResource(resource, {}));
-        log.addAction(events[i].command, `${events[i].event.id}\n`);
-        successCount++;
-      } else {
-        resource && (await client.client.createLinkedResource(resource, {}, new Event(), Event));
-        log.addAction(events[i].command, `${events[i].event.id}\n`);
-        successCount++;
-      }
-    } catch (e) {
-      log.addComment(`${events[i].command} FAILED: ${events[i].event.id}`);
-      log.addComment(e.toString());
-    }
-  }
-
-  if (!silent && logFile) {
-    await log.writeToFile(logFile.replace('<DATE>', timestamp));
-  }
-
-  console.log(`Processed ${successCount} events.`);
 };
 
 // log format:
