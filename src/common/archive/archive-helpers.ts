@@ -39,5 +39,5 @@ export async function asyncQuestion(question: string): Promise<boolean> {
   const answer = await asyncQuestionInternal(rl, question);
 
   rl.close();
-  return answer.length > 0 && answer[0].toLowerCase() == 'y';
+  return answer.length > 0 && answer[0].toLowerCase() === 'y';
 }

@@ -8,7 +8,9 @@ import {
   DynamicContent,
   ContentType,
   ContentTypeSchema,
-  ContentRepositoryContentType
+  ContentRepositoryContentType,
+  Status,
+  ContentTypeCachedSchema
 } from 'dc-management-sdk-js';
 import MockPage from './mock-page';
 
@@ -18,8 +20,13 @@ export interface ItemTemplate {
   folderPath?: string;
   repoId: string;
   typeSchemaUri: string;
+  version?: number;
+  status?: string;
+  locale?: string;
+  lastPublishedVersion?: number;
 
   body?: any;
+  dependancy?: string;
 }
 
 export interface ItemInfo {
@@ -36,6 +43,10 @@ export interface MockRepository {
 export class MockContentMetrics {
   itemsCreated = 0;
   itemsUpdated = 0;
+  itemsArchived = 0;
+  itemsUnarchived = 0;
+  itemsLocaleSet = 0;
+  itemsVersionGet = 0;
   foldersCreated = 0;
   typesCreated = 0;
   typeSchemasCreated = 0;
@@ -43,6 +54,10 @@ export class MockContentMetrics {
   reset(): void {
     this.itemsCreated = 0;
     this.itemsUpdated = 0;
+    this.itemsArchived = 0;
+    this.itemsUnarchived = 0;
+    this.itemsLocaleSet = 0;
+    this.itemsVersionGet = 0;
     this.foldersCreated = 0;
     this.typesCreated = 0;
     this.typeSchemasCreated = 0;
@@ -64,22 +79,43 @@ export class MockContent {
 
   metrics = new MockContentMetrics();
 
+  // If true, actions performed on content items will throw as if they failed.
+  failItemActions: null | 'all' | 'not-version' = null;
+  failFolderActions: null | 'list' | 'parent' | 'items' = null;
+  failRepoActions: null | 'list' | 'create' = null;
+  failHubGet: boolean;
+  failRepoList: boolean;
+
   uniqueId = 0;
 
   constructor(private contentService: jest.Mock<DynamicContent>) {
     const mockHub = this.createMockHub();
 
     const mockFolderGet = jest.fn(id => Promise.resolve(this.folderById.get(id) as Folder));
-    const mockRepoGet = jest.fn(id => Promise.resolve((this.repoById.get(id) as MockRepository).repo));
+    const mockRepoGet = jest.fn(id => {
+      return Promise.resolve((this.repoById.get(id) as MockRepository).repo);
+    });
 
-    const mockHubGet = jest.fn().mockResolvedValue(mockHub);
+    const mockHubGet = jest.fn(() => {
+      if (this.failHubGet) {
+        throw new Error('Simulated Netowrk Failure.');
+      }
+      return Promise.resolve(mockHub);
+    });
+
     const mockHubList = jest.fn().mockResolvedValue([mockHub]);
 
     const mockTypeGet = jest.fn(id => Promise.resolve(this.typeById.get(id) as ContentType));
 
     const mockTypeSchemaGet = jest.fn(id => Promise.resolve(this.typeSchemaById.get(id) as ContentTypeSchema));
 
-    const mockItemGet = jest.fn(id => Promise.resolve(this.items.find(item => item.id === id)));
+    const mockItemGet = jest.fn(id => {
+      const result = this.items.find(item => item.id === id);
+      if (result == null) {
+        throw new Error(`Content item with id ${id} was requested, but is missing.`);
+      }
+      return Promise.resolve(result);
+    });
 
     contentService.mockReturnValue(({
       hubs: {
@@ -104,17 +140,25 @@ export class MockContent {
     } as any) as DynamicContent);
   }
 
+  private getFolderName(path: string | undefined): string {
+    let folderName = '';
+    if (path != null) {
+      const pathSplit = path.split('/');
+      folderName = pathSplit[pathSplit.length - 1];
+    }
+
+    return folderName;
+  }
+
   private createMockHub(): Hub {
     const mockHub = new Hub();
 
-    const mockRepoList = jest.fn().mockImplementation(() =>
-      Promise.resolve(
-        new MockPage(
-          ContentRepository,
-          this.repos.map(repo => repo.repo)
-        )
-      )
-    );
+    const mockRepoList = jest.fn().mockImplementation(() => {
+      if (this.failRepoList) {
+        throw new Error('Simulated Netowrk Failure.');
+      }
+      return Promise.resolve(new MockPage(ContentRepository, this.repos.map(repo => repo.repo)));
+    });
     const mockTypesList = jest
       .fn()
       .mockImplementation(() => Promise.resolve(new MockPage(ContentType, Array.from(this.typeById.values()))));
@@ -160,20 +204,37 @@ export class MockContent {
       items: this.items.filter(item => (item as any).repoId == repoId)
     };
 
-    const mockItemList = jest.fn().mockImplementation(() => Promise.resolve(new MockPage(ContentItem, mockRepo.items)));
+    const mockItemList = jest.fn().mockImplementation((options: any) => {
+      if (this.failRepoActions == 'list') {
+        throw new Error('Simulated network failure.');
+      }
+
+      let filter = mockRepo.items;
+      if (options.status) {
+        filter = filter.filter(item => item.status === options.status);
+      }
+
+      return Promise.resolve(new MockPage(ContentItem, filter));
+    });
     repo.related.contentItems.list = mockItemList;
 
-    const mockFolderList = jest.fn().mockImplementation(() =>
-      Promise.resolve(
-        new MockPage(
-          Folder,
-          this.folders.filter(folder => (folder as any).repoId === repoId && folder.id == folder.name)
+    const mockFolderList = jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(
+          new MockPage(
+            Folder,
+            this.folders.filter(folder => (folder as any).repoId === repoId && folder.id == folder.name)
+          )
         )
-      )
-    );
+      );
     repo.related.folders.list = mockFolderList;
 
     const mockItemCreate = jest.fn().mockImplementation((item: ContentItem) => {
+      if (this.failRepoActions == 'create') {
+        throw new Error('Simulated network failure.');
+      }
+
       item = new ContentItem(item);
       item.id = 'UNIQUE-' + this.uniqueId++;
       this.createItem(item, mockRepo);
@@ -205,29 +266,87 @@ export class MockContent {
   createItem(item: ContentItem, mockRepo: MockRepository | undefined): void {
     this.metrics.itemsCreated++;
 
+    item.version = item.version || 1;
+    item.locale = ''; // This is not created with the content.
+
     const mockItemRepo = jest.fn();
     item.related.contentRepository = mockItemRepo;
 
     const mockItemUpdate = jest.fn();
     item.related.update = mockItemUpdate;
 
+    const mockItemArchive = jest.fn();
+    item.related.archive = mockItemArchive;
+
+    const mockItemUnarchive = jest.fn();
+    item.related.unarchive = mockItemUnarchive;
+
+    const mockItemVersion = jest.fn();
+    item.related.contentItemVersion = mockItemVersion;
+
+    const mockItemLocale = jest.fn(async (locale: string) => {
+      this.metrics.itemsLocaleSet++;
+      item.locale = locale;
+
+      return Promise.resolve(item);
+    });
+    item.related.setLocale = mockItemLocale;
+
     if (mockRepo != null) {
       (item as any).repoId = mockRepo.repo.id;
     }
 
-    mockItemRepo.mockImplementation(() =>
-      Promise.resolve((this.repoById.get((item as any).repoId) as MockRepository).repo)
-    );
+    mockItemRepo.mockImplementation(() => {
+      if (this.failItemActions) throw new Error('Simulated network failure.');
+      return Promise.resolve((this.repoById.get((item as any).repoId) as MockRepository).repo);
+    });
 
     mockItemUpdate.mockImplementation(newItem => {
+      if (this.failItemActions) throw new Error('Simulated network failure.');
       this.metrics.itemsUpdated++;
 
       item.label = newItem.label;
       item.body = newItem.body;
       item.status = newItem.status;
-      item.version = newItem.version;
+      item.version = (item.version as number) + 1;
 
       return Promise.resolve(item);
+    });
+
+    mockItemArchive.mockImplementation(() => {
+      if (this.failItemActions) throw new Error('Simulated network failure.');
+      if (item.status != Status.ACTIVE) {
+        throw new Error('Cannot archive content that is already archived.');
+      }
+
+      this.metrics.itemsArchived++;
+
+      item.status = Status.DELETED;
+
+      return Promise.resolve(item);
+    });
+
+    mockItemUnarchive.mockImplementation(() => {
+      if (this.failItemActions) throw new Error('Simulated network failure.');
+      if (item.status == Status.ACTIVE) {
+        throw new Error('Cannot unarchive content that is not archived.');
+      }
+
+      this.metrics.itemsUnarchived++;
+
+      item.status = Status.ACTIVE;
+
+      return Promise.resolve(item);
+    });
+
+    mockItemVersion.mockImplementation(version => {
+      if (this.failItemActions && this.failItemActions != 'not-version') throw new Error('Simulated network failure.');
+      const newItem = { ...item };
+
+      newItem.version = version;
+      this.metrics.itemsVersionGet++;
+
+      return Promise.resolve(newItem);
     });
 
     this.items.push(item);
@@ -245,13 +364,25 @@ export class MockContent {
     schemaOnly?: boolean
   ): void {
     if (!this.typeSchemaById.has(id)) {
-      const schema = new ContentTypeSchema({ id: id, schemaId: schemaName, body: body });
+      const schema = new ContentTypeSchema({ id: id, schemaId: schemaName, body: JSON.stringify(body) });
       this.typeSchemaById.set(id, schema);
     }
 
     if (!schemaOnly) {
       const type = new ContentType({ id: id, contentTypeUri: schemaName, settings: { label: basename(schemaName) } });
       this.typeById.set(id, type);
+
+      const mockCached = jest.fn();
+      type.related.contentTypeSchema.get = mockCached;
+
+      mockCached.mockImplementation(() => {
+        const cached = new ContentTypeCachedSchema({
+          contentTypeUri: schemaName,
+          cachedSchema: { ...body, $id: schemaName }
+        });
+
+        return Promise.resolve(cached);
+      });
 
       const repoArray = typeof repos === 'string' ? [repos] : repos;
       repoArray.forEach(repoName => {
@@ -273,21 +404,21 @@ export class MockContent {
 
     // Generate items.
     templates.forEach(template => {
-      let folderName = '';
       const folderId = template.folderPath;
-      if (folderId != null) {
-        const pathSplit = folderId.split('/');
-        folderName = pathSplit[pathSplit.length - 1];
-      }
+      const folderName = this.getFolderName(folderId);
 
       const folderNullOrEmpty = folderId == null || folderId.length == 0;
 
       const item = new ContentItem({
         label: template.label,
-        status: 'ACTIVE',
+        status: template.status || Status.ACTIVE,
         id: template.id || '0',
         folderId: folderNullOrEmpty ? null : folderId,
+        version: template.version,
+        lastPublishedVersion: template.lastPublishedVersion,
+        locale: template.locale,
         body: {
+          ...template.body,
           _meta: {
             schema: template.typeSchemaUri
           }
@@ -309,8 +440,7 @@ export class MockContent {
       this.createItem(item, this.repoById.get(template.repoId));
     });
 
-    // Generate folders that contain the items.
-    folderTemplates.forEach(folderTemplate => {
+    const generateFolder = (folderTemplate: { name: string; id: string; repoId: string }): void => {
       if (this.folderById.has(folderTemplate.id)) {
         return;
       }
@@ -326,7 +456,11 @@ export class MockContent {
       const slashInd = id.lastIndexOf('/');
       if (slashInd !== -1) {
         const parentPath = id.substring(0, slashInd);
-        const parent = this.folders.find(folder => folder.id == parentPath);
+        let parent = this.folders.find(folder => folder.id == parentPath);
+        if (parentPath != '') {
+          generateFolder({ id: parentPath, name: this.getFolderName(parentPath), repoId: folderTemplate.repoId });
+          parent = this.folders.find(folder => folder.id == parentPath);
+        }
         if (parent != null) {
           const subfolders = this.subfoldersById.get(parent.id as string) || [];
           subfolders.push(folder);
@@ -335,6 +469,11 @@ export class MockContent {
       }
 
       this.createFolder(folder);
+    };
+
+    // Generate folders that contain the items.
+    folderTemplates.forEach(folderTemplate => {
+      generateFolder(folderTemplate);
     });
 
     // Generate repositories.
@@ -407,21 +546,25 @@ export class MockContent {
     const mockFolderRepo = jest.fn();
     folder.related.contentRepository = mockFolderRepo;
 
-    mockFolderList.mockImplementation(() =>
-      Promise.resolve(
-        new MockPage(
-          ContentItem,
-          this.items.filter(item => item.folderId === id)
-        )
-      )
-    );
+    mockFolderList.mockImplementation(() => {
+      if (this.failFolderActions === 'items') {
+        throw new Error('Simulated network failure.');
+      }
+      return Promise.resolve(new MockPage(ContentItem, this.items.filter(item => item.folderId === id)));
+    });
 
     mockFolderSubfolder.mockImplementation(() => {
+      if (this.failFolderActions === 'list') {
+        throw new Error('Simulated network failure.');
+      }
       const subfolders: Folder[] = this.subfoldersById.get(id) || [];
       return Promise.resolve(new MockPage(Folder, subfolders));
     });
 
     mockFolderParent.mockImplementation(() => {
+      if (this.failFolderActions === 'parent') {
+        throw new Error('Simulated network failure.');
+      }
       let result: Folder | undefined;
       this.subfoldersById.forEach((value, key) => {
         if (value.indexOf(folder) !== -1) {
@@ -479,6 +622,10 @@ export function getItemInfo(items: ItemTemplate[]): ItemInfo {
 }
 
 export function getItemName(baseDir: string, item: ItemTemplate, info: ItemInfo, validRepos?: string[]): string {
+  if (item.dependancy) {
+    return join(baseDir, item.dependancy, '_dependancies', item.label + '.json');
+  }
+
   if (validRepos) {
     let basePath = item.folderPath || '';
     if (info.repos.length > 1 && validRepos.indexOf(item.repoId) !== -1) {

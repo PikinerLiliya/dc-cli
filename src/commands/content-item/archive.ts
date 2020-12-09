@@ -5,7 +5,7 @@ import { ArchiveLog } from '../../common/archive/archive-log';
 import paginator from '../../common/dc-management-sdk-js/paginator';
 import { confirmArchive } from '../../common/archive/archive-helpers';
 import ArchiveOptions from '../../common/archive/archive-options';
-import { ContentItem } from 'dc-management-sdk-js';
+import { ContentItem, DynamicContent } from 'dc-management-sdk-js';
 import { equalsOrRegex } from '../../common/filter/filter';
 import { getDefaultLogPath } from '../../common/log-helpers';
 
@@ -30,7 +30,8 @@ export const builder = (yargs: Argv): void => {
     })
     .option('folderId', {
       type: 'string',
-      describe: 'The ID of a folder to search items in to be archived.'
+      describe: 'The ID of a folder to search items in to be archived.',
+      requiresArg: false
     })
     .option('name', {
       type: 'string',
@@ -40,7 +41,7 @@ export const builder = (yargs: Argv): void => {
     .option('contentType', {
       type: 'string',
       describe:
-        'The ID of a Content type to archive all content items.\nA single --contentType option may be given to match a single content type pattern.\nMultiple --contentType options may be given to match multiple content type patterns at the same time.'
+        'A pattern which will only archive content items with a matching Content Type Schema ID. A single --contentType option may be given to match a single schema id pattern.\\nMultiple --contentType options may be given to match multiple schema patterns at the same time.'
     })
     .option('revertLog', {
       type: 'string',
@@ -72,106 +73,171 @@ export const builder = (yargs: Argv): void => {
     });
 };
 
-export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationParameters>): Promise<void> => {
-  const { id, logFile, force, silent, ignoreError, hubId, revertLog, repoId, folderId, name, contentType } = argv;
-  const client = dynamicContentClientFactory(argv);
-
-  let contentItems: ContentItem[] = [];
-  let allContent = false;
-  let missingContent = false;
-
-  if (repoId && id) {
-    console.log('ID of content item is specified, ignoring repository ID');
-  }
-
-  if (id && name) {
-    console.log('Please specify either a item name or an ID - not both.');
-    return;
-  }
-
-  if (repoId && folderId) {
-    console.log('Folder is specified, ignoring repository ID');
-  }
-
-  if (id != null) {
-    try {
-      const contentItem = await client.contentItems.get(id);
-      contentItems = [contentItem];
-    } catch (e) {
-      console.log(`Fatal error: could not find content item with ID ${id}. Error: \n${e.toString()}`);
-      return;
-    }
-  } else {
-    try {
-      const hub = await client.hubs.get(hubId);
-      const repoIds = typeof repoId === 'string' ? [repoId] : repoId || [];
-      const folderIds = typeof folderId === 'string' ? [folderId] : folderId || [];
-
-      const contentRepositories = await (repoId != null
-        ? Promise.all(repoIds.map(id => client.contentRepositories.get(id)))
-        : paginator(hub.related.contentRepositories.list));
-
-      const folders = folderId != null ? await Promise.all(folderIds.map(id => client.folders.get(id))) : [];
-
-      folderId != null
-        ? await Promise.all(
-            folders.map(async source => {
-              const items = await paginator(source.related.contentItems.list);
-
-              Array.prototype.push.apply(
-                contentItems,
-                items.filter(item => item.status == 'ACTIVE')
-              );
-            })
-          )
-        : await Promise.all(
-            contentRepositories.map(async source => {
-              const items = await paginator(source.related.contentItems.list, { status: 'ACTIVE' });
-              Array.prototype.push.apply(contentItems, items);
-            })
-          );
-    } catch (e) {
-      console.log(
-        `Fatal error: could not retrieve content items to archive. Is your repo ID correct? Error: \n${e.toString()}`
-      );
-      return;
-    }
+export const filterContentItems = async ({
+  revertLog,
+  name,
+  contentType,
+  contentItems
+}: {
+  revertLog?: string;
+  name?: string | string[];
+  contentType?: string | string[];
+  contentItems: ContentItem[];
+}): Promise<{ contentItems: ContentItem[]; missingContent: boolean } | undefined> => {
+  try {
+    let missingContent = false;
 
     if (revertLog != null) {
-      try {
-        const log = await new ArchiveLog().loadFromFile(revertLog);
-        const ids = log.getData('UNARCHIVE');
-        contentItems = contentItems.filter(contentItem => ids.indexOf(contentItem.id || '') != -1);
-        if (contentItems.length != ids.length) {
-          missingContent = true;
-        }
-      } catch (e) {
-        console.log(`Fatal error - could not read unarchive log. Error: \n${e.toString()}`);
-        return;
+      const log = await new ArchiveLog().loadFromFile(revertLog);
+      const ids = log.getData('UNARCHIVE');
+      const contentItemsFiltered = contentItems.filter(contentItem => ids.indexOf(contentItem.id || '') != -1);
+      if (contentItems.length != ids.length) {
+        missingContent = true;
       }
-    } else if (name != null) {
-      const itemsArray: string[] = Array.isArray(name) ? name : [name];
-      contentItems = contentItems.filter(item => itemsArray.findIndex(id => equalsOrRegex(item.label || '', id)) != -1);
-    } else if (contentType != null) {
-      const itemsArray: string[] = Array.isArray(contentType) ? contentType : [contentType];
-      contentItems = contentItems.filter(item => {
-        if (item && item.body && item.body._meta) {
-          return itemsArray.findIndex(id => equalsOrRegex(item.body._meta.schema || '', id)) != -1;
-        }
-      });
-    } else {
-      console.log('No filter, ID or log file was given, so archiving all content.');
-      allContent = true;
-    }
-  }
 
+      return {
+        contentItems: contentItemsFiltered,
+        missingContent
+      };
+    }
+
+    if (name != null) {
+      const itemsArray: string[] = Array.isArray(name) ? name : [name];
+      const contentItemsFiltered = contentItems.filter(
+        item => itemsArray.findIndex(id => equalsOrRegex(item.label || '', id)) != -1
+      );
+
+      return {
+        contentItems: contentItemsFiltered,
+        missingContent
+      };
+    }
+
+    if (contentType != null) {
+      const itemsArray: string[] = Array.isArray(contentType) ? contentType : [contentType];
+      const contentItemsFiltered = contentItems.filter(item => {
+        return itemsArray.findIndex(id => equalsOrRegex(item.body._meta.schema, id)) != -1;
+      });
+
+      return {
+        contentItems: contentItemsFiltered,
+        missingContent
+      };
+    }
+
+    return {
+      contentItems,
+      missingContent
+    };
+  } catch (err) {
+    console.log(err);
+    return {
+      contentItems: [],
+      missingContent: false
+    };
+  }
+};
+
+export const getContentItems = async ({
+  client,
+  id,
+  hubId,
+  repoId,
+  folderId,
+  revertLog,
+  name,
+  contentType
+}: {
+  client: DynamicContent;
+  id?: string;
+  hubId: string;
+  repoId?: string | string[];
+  folderId?: string | string[];
+  revertLog?: string;
+  name?: string | string[];
+  contentType?: string | string[];
+}): Promise<{ contentItems: ContentItem[]; missingContent: boolean }> => {
+  try {
+    const contentItems: ContentItem[] = [];
+
+    if (id != null) {
+      contentItems.push(await client.contentItems.get(id));
+
+      return {
+        contentItems,
+        missingContent: false
+      };
+    }
+
+    const hub = await client.hubs.get(hubId);
+    const repoIds = typeof repoId === 'string' ? [repoId] : repoId || [];
+    const folderIds = typeof folderId === 'string' ? [folderId] : folderId || [];
+    const contentRepositories = await (repoId != null
+      ? Promise.all(repoIds.map(id => client.contentRepositories.get(id)))
+      : paginator(hub.related.contentRepositories.list));
+
+    const folders = folderId != null ? await Promise.all(folderIds.map(id => client.folders.get(id))) : [];
+
+    folderId != null
+      ? await Promise.all(
+          folders.map(async source => {
+            const items = await paginator(source.related.contentItems.list);
+
+            contentItems.push(...items.filter(item => item.status == 'ACTIVE'));
+          })
+        )
+      : await Promise.all(
+          contentRepositories.map(async source => {
+            const items = await paginator(source.related.contentItems.list, { status: 'ACTIVE' });
+            contentItems.push(...items);
+          })
+        );
+
+    return (
+      (await filterContentItems({
+        revertLog,
+        name,
+        contentType,
+        contentItems
+      })) || {
+        contentItems: [],
+        missingContent: false
+      }
+    );
+  } catch (err) {
+    console.log(err);
+
+    return {
+      contentItems: [],
+      missingContent: false
+    };
+  }
+};
+
+export const processItems = async ({
+  contentItems,
+  force,
+  silent,
+  logFile,
+  allContent,
+  missingContent,
+  ignoreError
+}: {
+  contentItems: ContentItem[];
+  force?: boolean;
+  silent?: boolean;
+  logFile?: string;
+  allContent: boolean;
+  missingContent: boolean;
+  ignoreError?: boolean;
+}): Promise<void> => {
   if (contentItems.length == 0) {
     console.log('Nothing found to archive, aborting.');
     return;
   }
 
   console.log('The following content items will be archived:');
-  contentItems.forEach(contentItem => {
+  contentItems.forEach((contentItem: ContentItem) => {
     console.log(` ${contentItem.label} (${contentItem.id})`);
   });
   console.log(`Total: ${contentItems.length}`);
@@ -216,6 +282,51 @@ export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationPara
   }
 
   console.log(`Archived ${successCount} content items.`);
+};
+
+export const handler = async (argv: Arguments<ArchiveOptions & ConfigurationParameters>): Promise<void> => {
+  const { id, logFile, force, silent, ignoreError, hubId, revertLog, repoId, folderId, name, contentType } = argv;
+  const client = dynamicContentClientFactory(argv);
+
+  const allContent = !id && !name && !contentType && !revertLog;
+
+  if (repoId && id) {
+    console.log('ID of content item is specified, ignoring repository ID');
+  }
+
+  if (id && name) {
+    console.log('Please specify either a item name or an ID - not both.');
+    return;
+  }
+
+  if (repoId && folderId) {
+    console.log('Folder is specified, ignoring repository ID');
+  }
+
+  if (allContent) {
+    console.log('No filter was given, archiving all content');
+  }
+
+  const { contentItems, missingContent } = await getContentItems({
+    client,
+    id,
+    hubId,
+    repoId,
+    folderId,
+    revertLog,
+    contentType,
+    name
+  });
+
+  await processItems({
+    contentItems,
+    force,
+    silent,
+    logFile,
+    allContent,
+    missingContent,
+    ignoreError
+  });
 };
 
 // log format:

@@ -1,5 +1,6 @@
 import { ContentItem, ContentRepository } from 'dc-management-sdk-js';
 import { ContentMapping } from './content-mapping';
+import { Body } from './body';
 
 type DependancyContentTypeSchema =
   | 'http://bigcontent.io/cms/schema/v1/core#/definitions/content-link'
@@ -37,6 +38,8 @@ export const referenceTypes = [
   'http://bigcontent.io/cms/schema/v1/core#/definitions/content-reference'
 ];
 
+type RecursiveSearchStep = Body | ContentDependancy | Array<Body>;
+
 export class ContentDependancyTree {
   levels: ContentDependancyLayer[];
   circularLinks: ItemContentDependancies[];
@@ -71,12 +74,15 @@ export class ContentDependancyTree {
         const unresolvedDependancies = item.dependancies.filter(dep => !resolved.has(dep.dependancy.id as string));
 
         if (unresolvedDependancies.length === 0) {
-          resolved.add(item.owner.content.id as string);
           stage.push(item);
           return false;
         }
 
         return true;
+      });
+
+      stage.forEach(item => {
+        resolved.add(item.owner.content.id as string);
       });
 
       unresolvedCount = info.length;
@@ -96,10 +102,9 @@ export class ContentDependancyTree {
     this.requiredSchema = Array.from(requiredSchema);
   }
 
-  public searchObjectForContentDependancies(
+  private searchObjectForContentDependancies(
     item: RepositoryContentItem,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    body: any,
+    body: RecursiveSearchStep,
     result: ContentDependancyInfo[]
   ): void {
     if (Array.isArray(body)) {
@@ -115,12 +120,12 @@ export class ContentDependancyTree {
         typeof body.contentType === 'string' &&
         typeof body.id === 'string'
       ) {
-        result.push({ dependancy: body, owner: item });
+        result.push({ dependancy: body as ContentDependancy, owner: item });
         return;
       }
 
       allPropertyNames.forEach(propName => {
-        const prop = body[propName];
+        const prop = (body as Body)[propName];
         if (typeof prop === 'object') {
           this.searchObjectForContentDependancies(item, prop, result);
         }
@@ -128,8 +133,7 @@ export class ContentDependancyTree {
     }
   }
 
-  public removeContentDependancies(
-    item: RepositoryContentItem,
+  public removeContentDependanciesFromBody(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     body: any,
     remove: object[]
@@ -139,7 +143,7 @@ export class ContentDependancyTree {
         if (remove.indexOf(body[i]) !== -1) {
           body.splice(i--, 1);
         } else {
-          this.removeContentDependancies(item, body[i], remove);
+          this.removeContentDependanciesFromBody(body[i], remove);
         }
       }
     } else {
@@ -150,35 +154,7 @@ export class ContentDependancyTree {
         if (remove.indexOf(prop) !== -1) {
           delete body[propName];
         } else if (typeof prop === 'object') {
-          this.removeContentDependancies(item, prop, remove);
-        }
-      });
-    }
-  }
-
-  public simpleValidation(
-    item: RepositoryContentItem,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    body: any,
-    remove: object[]
-  ): void {
-    if (Array.isArray(body)) {
-      for (let i = 0; i < body.length; i++) {
-        if (remove.indexOf(body[i]) !== -1) {
-          body.splice(i--, 1);
-        } else {
-          this.removeContentDependancies(item, body[i], remove);
-        }
-      }
-    } else {
-      const allPropertyNames = Object.getOwnPropertyNames(body);
-
-      allPropertyNames.forEach(propName => {
-        const prop = body[propName];
-        if (remove.indexOf(prop) !== -1) {
-          delete body[propName];
-        } else if (typeof prop === 'object') {
-          this.removeContentDependancies(item, prop, remove);
+          this.removeContentDependanciesFromBody(prop, remove);
         }
       });
     }
@@ -242,12 +218,16 @@ export class ContentDependancyTree {
     });
   }
 
-  removeContent = (items: ItemContentDependancies[]): void => {
+  public removeContent(items: ItemContentDependancies[]): void {
     this.levels.forEach(level => {
       level.items = level.items.filter(item => items.indexOf(item) === -1);
     });
 
     this.all = this.all.filter(item => items.indexOf(item) === -1);
     this.circularLinks = this.circularLinks.filter(item => items.indexOf(item) === -1);
-  };
+
+    items.forEach(item => {
+      this.byId.delete(item.owner.content.id as string);
+    });
+  }
 }

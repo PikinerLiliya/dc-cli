@@ -10,3 +10,7 @@ export const builder = (yargs: Argv): Argv =>
     .commandDir('content-type', YargsCommandBuilderOptions)
     .demandCommand()
     .help();
+
+export const handler = (): void => {
+  /* do nothing */
+};

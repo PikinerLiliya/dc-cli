@@ -87,15 +87,15 @@ export const handler = async (argv: Arguments<UnarchiveOptions & ConfigurationPa
       console.log(
         `Fatal error: could not retrieve content types to unarchive. Is your hub correct? Error: \n${e.toString()}`
       );
-      throw e;
+      return;
     }
 
     if (revertLog != null) {
       try {
         const log = await new ArchiveLog().loadFromFile(revertLog);
         const ids = log.getData('ARCHIVE');
-        types = types.filter(type => ids.indexOf(type.id || '') != -1);
-        if (types.length != ids.length) {
+        types = types.filter(type => ids.indexOf(type.id || '') !== -1);
+        if (types.length !== ids.length) {
           missingContent = true;
         }
       } catch (e) {
@@ -104,14 +104,16 @@ export const handler = async (argv: Arguments<UnarchiveOptions & ConfigurationPa
       }
     } else if (schemaId != null) {
       const schemaIds: string[] = Array.isArray(schemaId) ? schemaId : [schemaId];
-      types = types.filter(schema => schemaIds.findIndex(id => equalsOrRegex(schema.contentTypeUri || '', id)) != -1);
+      types = types.filter(
+        schema => schemaIds.findIndex(id => equalsOrRegex(schema.contentTypeUri as string, id)) !== -1
+      );
     } else {
       allContent = true;
       console.log('No filter, ID or log file was given, so unarchiving all content.');
     }
   }
 
-  if (types.length == 0) {
+  if (types.length === 0) {
     console.log('Nothing found to unarchive, aborting.');
     return;
   }
@@ -119,7 +121,7 @@ export const handler = async (argv: Arguments<UnarchiveOptions & ConfigurationPa
   console.log('The following content will be unarchived:');
   types.forEach(type => {
     const settings = type.settings;
-    console.log('  ' + (settings === undefined ? 'unknown' : settings.label));
+    console.log('  ' + (typeof settings === 'undefined' ? 'unknown' : settings.label));
   });
 
   if (!force) {
@@ -150,13 +152,13 @@ export const handler = async (argv: Arguments<UnarchiveOptions & ConfigurationPa
         console.log(`Failed to unarchive ${label}, continuing. Error: \n${e.toString()}`);
       } else {
         console.log(`Failed to unarchive ${label}, aborting. Error: \n${e.toString()}`);
-        return;
+        break;
       }
     }
     console.log('Unarchived: ' + label);
   }
 
-  if (!silent) {
+  if (!silent && logFile) {
     await log.writeToFile(logFile.replace('<DATE>', timestamp));
   }
 

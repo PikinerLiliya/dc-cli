@@ -1,0 +1,979 @@
+{
+  "id": "5db1727bcff47e0001ce5fd1",
+  "name": "amplienceclone1",
+  "label": "Amplience Clone 1",
+  "description": null,
+  "status": "ACTIVE",
+  "settings": {
+    "virtualStagingEnvironment": {
+      "hostname": "lt4678qbqk371h3pz8xszxcvn.staging.bigcontent.io"
+    },
+    "previewVirtualStagingEnvironment": {
+      "hostname": "lt4678qbqk371h3pz8xszxcvn.staging.bigcontent.io"
+    },
+    "applications": [
+      {
+        "name": "amplience",
+        "templatedUri": "https://amplience.com/"
+      }
+    ],
+    "devices": [
+      {
+        "name": "Desktop",
+        "width": 1024,
+        "height": 1000,
+        "orientate": false
+      },
+      {
+        "name": "Tablet",
+        "width": 767,
+        "height": 1000,
+        "orientate": true
+      },
+      {
+        "name": "Mobile",
+        "width": 400,
+        "height": 1000,
+        "orientate": true
+      }
+    ],
+    "publishing": {
+      "platforms": {
+        "amplience_dam": {
+          "API_KEY": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+          "endpoint": "amptrain"
+        }
+      }
+    },
+    "localization": {
+      "locales": [
+        "en-GB",
+        "de-DE",
+        "sv-SE",
+        "fr-BE",
+        "fr-FR",
+        "en-US",
+        "en-IE",
+        "zh-CN",
+        "ar-AE",
+        "ab-AF",
+        "an-AR"
+      ]
+    }
+  },
+  "createdBy": "2f65cbc0-42e4-4899-8819-9b0cf9acf119",
+  "createdDate": "2019-10-24T09:44:27.853Z",
+  "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+  "lastModifiedDate": "2020-12-09T13:35:16.003Z",
+  "workflowStates": [
+    {
+      "id": "5fd0d2a252faff000125553d",
+      "label": "Rejected",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.894Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.894Z",
+      "color": "rgb(198,78,103)"
+    },
+    {
+      "id": "5fd0d2a2cff47e00012b79fd",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.892Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.892Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a2c9e77c000187ed6d",
+      "label": "Translation in progress",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.882Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.882Z",
+      "color": "rgb(100,190,225)"
+    },
+    {
+      "id": "5fd0d2a2c9e77c0001bea0b8",
+      "label": "Translation complete",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.882Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.882Z",
+      "color": "rgb(0,67,115)"
+    },
+    {
+      "id": "5fd0d2a2c9e77c00016346d9",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.880Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.880Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a2cff47e000143ab1a",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.871Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.871Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5fd0d2a2cff47e0001ebfece",
+      "label": "Translation complete",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.868Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.868Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5fd0d2a252faff000125553c",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.866Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.866Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a2cff47e000143ab19",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.864Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.864Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5fd0d2a2cff47e00012b79fc",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.858Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.858Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a24cedfd0001c5c8c7",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.855Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.855Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a2c9e77c0001bea0b7",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.842Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.842Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a24cedfd000134a121",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.842Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.842Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5fd0d2a2c9e77c000187ed6c",
+      "label": "new 123 456",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.841Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.841Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5fd0d2a2cff47e0001f1c908",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.829Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.829Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5fd0d2a2c9e77c0001d2bbee",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-12-09T13:35:30.809Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-12-09T13:35:30.809Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f8ed9d8c9e77c0001ddb871",
+      "label": "Translation in progress",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-10-20T12:36:40.895Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-10-20T12:36:40.895Z",
+      "color": "rgb(100,190,225)"
+    },
+    {
+      "id": "5f8ed9d8cff47e0001ad032a",
+      "label": "Translation complete",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-10-20T12:36:40.854Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-10-20T12:36:40.854Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f8ed9d84cedfd0001bf4ddb",
+      "label": "Ready For Translation",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-10-20T12:36:40.844Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-10-20T12:36:40.844Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f69dce5c9e77c0001c5cf0e",
+      "label": "Rejected",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.815Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.815Z",
+      "color": "rgb(198,78,103)"
+    },
+    {
+      "id": "5f69dce54cedfd00017d4a6a",
+      "label": "Approved",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.778Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.778Z",
+      "color": "rgb(63,152,134)"
+    },
+    {
+      "id": "5f69dce5c9e77c0001e15d0a",
+      "label": "Ready for translation",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.766Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.766Z",
+      "color": "rgb(192,192,48)"
+    },
+    {
+      "id": "5f69dce5c9e77c0001010c0a",
+      "label": "Translation in progress",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.745Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.745Z",
+      "color": "rgb(100,190,225)"
+    },
+    {
+      "id": "5f69dce54cedfd000165b9e3",
+      "label": "Translation complete",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.745Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.745Z",
+      "color": "rgb(0,67,115)"
+    },
+    {
+      "id": "5f69dce552faff0001f9c573",
+      "label": "New",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.740Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.740Z",
+      "color": "rgb(52,87,101)"
+    },
+    {
+      "id": "5f69dce54cedfd00014165c0",
+      "label": "Ready for review",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.740Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.740Z",
+      "color": "rgb(240,110,170)"
+    },
+    {
+      "id": "5f69dce54cedfd00018990b6",
+      "label": "Review again",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-22T11:15:49.739Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-22T11:15:49.739Z",
+      "color": "rgb(240,110,170)"
+    },
+    {
+      "id": "5f60d67452faff0001406993",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:56.044Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:56.044Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d6734cedfd00011cbdfb",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.974Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.974Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673cff47e0001dd3c42",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.925Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.925Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673cff47e0001dd3c43",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.924Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.924Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673cff47e0001dd3c40",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.923Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.923Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673cff47e0001dd3c3f",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.922Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.922Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673cff47e0001dd3c41",
+      "label": "new 123",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.921Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.921Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff00014a7e2b",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.910Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.910Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff00014a7e2d",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.909Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.909Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673cff47e00015d2888",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.908Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.908Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff00014a7e2c",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.908Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.908Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff0001406992",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.907Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.907Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff0001f8f6f9",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.905Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.905Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff0001406991",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.904Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.904Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673c9e77c00018d4796",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.903Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.903Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d6734cedfd00011cbdfa",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.903Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.903Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff0001406990",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.902Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.902Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d6734cedfd0001cb5f11",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.899Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.899Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d6734cedfd00011cbdf9",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.898Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.898Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d6734cedfd0001fa8f04",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.897Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.897Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673c9e77c00018d4795",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.896Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.896Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff0001802ccc",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.891Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.891Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff0001f8f6f8",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.885Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.885Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673cff47e00017f1c6a",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.883Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.883Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673cff47e00017f1c69",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.882Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.882Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d6734cedfd0001cb5f10",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.876Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.876Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673cff47e0001ec619a",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.875Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.875Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff0001f8f6f7",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.871Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.871Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d67352faff0001f8f6f6",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.866Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.866Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673cff47e0001bea9a0",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.864Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.864Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f60d673cff47e0001bea99f",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.861Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.861Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d6734cedfd0001fa8f03",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.860Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.860Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673cff47e0001ec6199",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.858Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.858Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d673c9e77c00018d4794",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.857Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.857Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff0001802ccb",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.853Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.853Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff0001802cca",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.853Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.853Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f60d67352faff000193350c",
+      "label": "new 123 456",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-15T14:57:55.849Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-15T14:57:55.849Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f5a03dbcff47e00015c4237",
+      "label": "new 123 456",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-10T10:45:47.117Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-10T10:45:47.117Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a0084cedfd00011b8200",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.769Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.769Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a00852faff000191f793",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.765Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.765Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a00852faff000191f792",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.726Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.726Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a008cff47e0001bd6bfb",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.719Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.719Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a0084cedfd00011b81ff",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.708Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.708Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a008cff47e0001eb2645",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.703Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.703Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a008c9e77c00018c0c2a",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.700Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.700Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a008cff47e00015bebed",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.699Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.699Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a0084cedfd0001f953aa",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.698Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.698Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a008cff47e0001eb2644",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.698Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.698Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a00852faff00017ef216",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.697Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.697Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a008c9e77c00018c0c29",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.696Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.696Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a0084cedfd0001ca233f",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.694Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.694Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5f57a0084cedfd0001f953ab",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.694Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.694Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a00852faff00013f2acb",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.693Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.693Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a008cff47e0001bd6bfa",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.693Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.693Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a008cff47e00017de044",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.686Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:15:20.686Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5f57a00852faff00013f2aca",
+      "label": "new 123",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2020-09-08T15:15:20.682Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2020-09-08T15:30:50.928Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc2f0b4cedfd0001d3ef41",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T16:27:55.411Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T16:27:55.411Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc2f0b4cedfd0001d3ef40",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T16:27:55.409Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T16:27:55.409Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc2e0ecff47e00017ce008",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T16:23:42.352Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T16:23:42.352Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc2e0ec9e77c000134c371",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T16:23:42.351Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T16:23:42.351Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc2d31cff47e0001cc04ce",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T16:20:01.191Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T16:20:01.191Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc2d314cedfd000102ba09",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T16:20:01.187Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T16:20:01.187Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc151152faff000197f9c4",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:37:05.741Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:37:05.741Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc151152faff000197f9c3",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:37:05.716Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:37:05.716Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc14a5cff47e00017cdb02",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:35:17.908Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:35:17.908Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc14a54cedfd0001d3ea7c",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:35:17.905Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:35:17.905Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc13b3cff47e0001cc001c",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:31:15.764Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:31:15.764Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc13b352faff0001b8ee86",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:31:15.758Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:31:15.758Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc12d152faff000197f95f",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:27:29.418Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:27:29.418Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc12d14cedfd00017a24f3",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:27:29.417Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:27:29.417Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc126052faff0001783741",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:25:36.503Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:25:36.503Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc1260cff47e00017cda97",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:25:36.503Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:25:36.503Z",
+      "color": "rgb(255,167,124)"
+    },
+    {
+      "id": "5dcc11b64cedfd00013933d2",
+      "label": "new",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:22:46.044Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:22:46.044Z",
+      "color": "rgb(25,195,151)"
+    },
+    {
+      "id": "5dcc11b6cff47e00016a454a",
+      "label": "draft",
+      "createdBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "createdDate": "2019-11-13T14:22:46.040Z",
+      "lastModifiedBy": "dee49f9e-acc0-44c2-bee0-c5e2dbb7e95a",
+      "lastModifiedDate": "2019-11-13T14:22:46.040Z",
+      "color": "rgb(255,167,124)"
+    }
+  ]
+}

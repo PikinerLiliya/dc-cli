@@ -1,4 +1,8 @@
-import { builder, command, handler, LOG_FILENAME } from './import';
+import { builder, command, handler, LOG_FILENAME, getDefaultMappingPath } from './import';
+import { dependsOn, dependantType } from './__mocks__/dependant-content-helper';
+import * as reverter from './import-revert';
+import * as publish from '../../common/import/publish-queue';
+import { getDefaultLogPath } from '../../common/log-helpers';
 import dynamicContentClientFactory from '../../services/dynamic-content-client-factory';
 import { Folder, ContentType } from 'dc-management-sdk-js';
 import Yargs from 'yargs/yargs';
@@ -12,7 +16,10 @@ import { ensureDirectoryExists } from '../../common/import/directory-utils';
 import { MockContent, ItemTemplate } from '../../common/dc-management-sdk-js/mock-content';
 
 jest.mock('readline');
+jest.mock('./import-revert');
 jest.mock('../../services/dynamic-content-client-factory');
+jest.mock('../../common/import/publish-queue');
+jest.mock('../../common/log-helpers');
 
 function rimraf(dir: string): Promise<Error> {
   return new Promise((resolve): void => {
@@ -27,6 +34,16 @@ describe('content-item import command', () => {
 
   it('should command should defined', function() {
     expect(command).toEqual('import <dir>');
+  });
+
+  it('should use getDefaultLogPath for LOG_FILENAME with process.platform as default', function() {
+    LOG_FILENAME();
+
+    expect(getDefaultLogPath).toHaveBeenCalledWith('item', 'import', process.platform);
+  });
+
+  it('should generate a default mapping path containing the given name', function() {
+    expect(getDefaultMappingPath('hub-1').indexOf('hub-1')).not.toEqual(-1);
   });
 
   describe('builder tests', function() {
@@ -81,6 +98,19 @@ describe('content-item import command', () => {
         describe: 'Skip any content items that has one or more missing dependancy.'
       });
 
+      expect(spyOption).toHaveBeenCalledWith('publish', {
+        type: 'boolean',
+        boolean: true,
+        describe: 'Publish any content items that have an existing publish status in their JSON.'
+      });
+
+      expect(spyOption).toHaveBeenCalledWith('republish', {
+        type: 'boolean',
+        boolean: true,
+        describe:
+          'Republish content items regardless of whether the import changed them or not. (--publish not required)'
+      });
+
       expect(spyOption).toHaveBeenCalledWith('logFile', {
         type: 'string',
         default: LOG_FILENAME,
@@ -100,6 +130,14 @@ describe('content-item import command', () => {
       clientSecret: 'client-id',
       hubId: 'hub-id'
     };
+
+    beforeEach(async () => {
+      jest.mock('readline');
+      jest.mock('../../services/dynamic-content-client-factory');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const calls = (publish as any).publishCalls;
+      calls.splice(0, calls.length);
+    });
 
     beforeAll(async () => {
       await rimraf('temp/import/');
@@ -143,6 +181,9 @@ describe('content-item import command', () => {
           label: item.label,
           contentRepositoryId: item.repoId,
           folderId: folderId,
+          locale: item.locale,
+          lastPublishedVersion: item.lastPublishedVersion,
+
           body: {
             _meta: {
               schema: item.typeSchemaUri
@@ -155,6 +196,9 @@ describe('content-item import command', () => {
 
         await promisify(writeFile)(path, jsonString);
       }
+
+      // Create a dummy file, which should not be imported in any tests.
+      await promisify(writeFile)(join(baseFolder, 'dummy'), 'don\t import me');
     }
 
     // == FUNCTIONALITY TESTS ==
@@ -164,7 +208,7 @@ describe('content-item import command', () => {
       const templates: ItemTemplate[] = [
         { label: 'item1', repoId: 'repo', typeSchemaUri: 'http://type' },
         { label: 'item2', repoId: 'repo', typeSchemaUri: 'http://type', folderPath: 'folderTest' },
-        { label: 'item3', repoId: 'repo', typeSchemaUri: 'http://type', folderPath: 'folderTest' },
+        { label: 'item3', repoId: 'repo', typeSchemaUri: 'http://type', folderPath: 'folderTest', locale: 'en-us' },
         { label: 'item4', repoId: 'repo', typeSchemaUri: 'http://type', folderPath: 'folderTest/nested' }
       ];
 
@@ -188,6 +232,7 @@ describe('content-item import command', () => {
       const matches = await mockContent.filterMatch(templates, '', false);
 
       expect(matches.length).toEqual(templates.length);
+      expect(mockContent.metrics.itemsLocaleSet).toEqual(1);
 
       await rimraf('temp/import/repo/');
     });
@@ -592,12 +637,7 @@ describe('content-item import command', () => {
       await createContent('temp/import/ref/', templates, false);
 
       // Add an existing mapping for the two items in "oldTemplates".
-      const existingMapping = {
-        contentItems: [
-          ['ref1', 'new1'],
-          ['ref2', 'new2']
-        ]
-      };
+      const existingMapping = { contentItems: [['ref1', 'new1'], ['ref2', 'new2']] };
       await ensureDirectoryExists('temp/import/ref/');
       await rimraf('temp/import/ref.json');
       await promisify(writeFile)('temp/import/ref.json', JSON.stringify(existingMapping));
@@ -739,12 +779,7 @@ describe('content-item import command', () => {
       await createContent('temp/import/mapping/', oldTemplates.concat(templates), false);
 
       // Add an existing mapping for the two items in "oldTemplates".
-      const existingMapping = {
-        contentItems: [
-          ['old1', 'new1'],
-          ['old2', 'new2']
-        ]
-      };
+      const existingMapping = { contentItems: [['old1', 'new1'], ['old2', 'new2']] };
       await ensureDirectoryExists('temp/import/mapping/');
       await rimraf('temp/import/mapping.json');
       await promisify(writeFile)('temp/import/mapping.json', JSON.stringify(existingMapping));
@@ -847,12 +882,7 @@ describe('content-item import command', () => {
       await createContent('temp/import/force/', skips.concat(oldTemplates.concat(templates)), true);
 
       // Add an existing mapping for the two items in "oldTemplates".
-      const existingMapping = {
-        contentItems: [
-          ['old1', 'new1'],
-          ['old2', 'new2']
-        ]
-      };
+      const existingMapping = { contentItems: [['old1', 'new1'], ['old2', 'new2']] };
       await ensureDirectoryExists('temp/import/force/');
       await rimraf('temp/import/force.json');
       await promisify(writeFile)('temp/import/force.json', JSON.stringify(existingMapping));
@@ -899,6 +929,359 @@ describe('content-item import command', () => {
       expect((readline as any).responsesLeft()).toEqual(0); // All responses consumed.
 
       await rimraf('temp/import/force/');
+    });
+
+    it('should exit without prompt when importing with no base and no content', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses([]);
+
+      await ensureDirectoryExists('temp/import/none/');
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.createMockRepository('repo');
+
+      mockContent.registerContentType('http://type', 'type', ['repo', 'repo2']);
+      mockContent.registerContentType('http://type2', 'type2', ['repo', 'repo2']);
+      mockContent.registerContentType('http://type3', 'type3', 'repo2');
+
+      mockContent.metrics.reset();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/none/',
+        mapFile: 'temp/import/none.json'
+      };
+      await handler(argv);
+
+      expect(mockContent.items.length).toEqual(0); // Should have done nothing
+
+      await rimraf('temp/import/none/');
+    });
+
+    it("should exit when importing repositories that don't exist on the target, and the prompt to continue is declined", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['n']);
+
+      await ensureDirectoryExists('temp/import/repoMissing/');
+      await ensureDirectoryExists('temp/import/repoMissing/repo');
+      await ensureDirectoryExists('temp/import/repoMissing/repoMissing');
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.createMockRepository('repo');
+
+      mockContent.registerContentType('http://type', 'type', ['repo', 'repo2']);
+      mockContent.registerContentType('http://type2', 'type2', ['repo', 'repo2']);
+      mockContent.registerContentType('http://type3', 'type3', 'repo2');
+
+      mockContent.metrics.reset();
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/repoMissing/',
+        mapFile: 'temp/import/repoMissing.json'
+      };
+
+      expect(await handler(argv)).toBeFalsy();
+
+      expect(mockContent.items.length).toEqual(0); // Should have done nothing
+
+      await rimraf('temp/import/repoMissing/');
+    });
+
+    it('should exit without prompt when the content service is unreachable (all variants)', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses([]);
+
+      await ensureDirectoryExists('temp/import/netError/');
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.failHubGet = true;
+
+      // First run: can't get hub.
+      const argv0 = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/netError/',
+        mapFile: 'temp/import/netError.json'
+      };
+      expect(await handler(argv0)).toBeFalsy();
+
+      // Other runs: everything but hub fails.
+      mockContent.failHubGet = false;
+      mockContent.failRepoList = true;
+
+      const argv1 = {
+        ...yargArgs,
+        ...config,
+        baseFolder: 'ignore',
+        dir: 'temp/import/netError/',
+        mapFile: 'temp/import/netError.json'
+      };
+      expect(await handler(argv1)).toBeFalsy();
+
+      const argv2 = {
+        ...yargArgs,
+        ...config,
+        baseRepo: 'ignore',
+        dir: 'temp/import/netError/',
+        mapFile: 'temp/import/netError.json'
+      };
+      expect(await handler(argv2)).toBeFalsy();
+
+      const argv3 = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/netError/',
+        mapFile: 'temp/import/netError.json'
+      };
+      expect(await handler(argv3)).toBeFalsy();
+
+      await rimraf('temp/import/netError/');
+    });
+
+    it('should call import-revert if passed a revertLog', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses([]);
+
+      // First run: can't get hub.
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/unused/',
+        revertLog: 'log.txt'
+      };
+
+      expect(await handler(argv)).toBeTruthy();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((reverter as any).calls[0]).toEqual(argv);
+    });
+
+    it('should publish items when --publish is provided, and the items specify a last published version', async () => {
+      // Create content to import
+      // 3 out of 4 should publish. item2 publishes item3, so only 2 requests are made.
+
+      const templates: ItemTemplate[] = [
+        { label: 'item1', repoId: 'repo', typeSchemaUri: 'http://type', lastPublishedVersion: 1 },
+        {
+          label: 'item2',
+          repoId: 'repo',
+          typeSchemaUri: 'http://type',
+          folderPath: 'folderTest',
+          lastPublishedVersion: 1,
+          body: dependsOn(['id3'])
+        },
+        {
+          id: 'id3',
+          label: 'item3',
+          repoId: 'repo',
+          typeSchemaUri: 'http://type',
+          folderPath: 'folderTest',
+          lastPublishedVersion: 1 // This item is implicitly published by item 2, so it should NOT be published separately.
+        },
+        { label: 'item4', repoId: 'repo', typeSchemaUri: 'http://type', folderPath: 'folderTest/nested' }
+      ];
+
+      await createContent('temp/import/publish/', templates, false);
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.createMockRepository('targetRepo');
+      mockContent.registerContentType('http://type', 'type', 'targetRepo');
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/publish/',
+        mapFile: 'temp/import/publish.json',
+        baseRepo: 'targetRepo',
+        publish: true
+      };
+      await handler(argv);
+
+      const matches = await mockContent.filterMatch(templates, '', false);
+
+      expect(matches.length).toEqual(templates.length);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((publish as any).publishCalls.length).toEqual(2);
+
+      await rimraf('temp/import/publish/');
+    });
+
+    const circularDependancies: ItemTemplate[] = [
+      { id: 'id1', label: 'item1', repoId: 'repo', typeSchemaUri: 'http://type', body: dependsOn(['id2']) },
+      {
+        id: 'id2',
+        label: 'item2',
+        repoId: 'repo',
+        typeSchemaUri: 'http://type',
+        folderPath: 'folderTest',
+        body: dependsOn(['id1', 'id3']),
+        lastPublishedVersion: 1 // Test publishing a circular dependancy.
+      },
+      {
+        id: 'id3',
+        label: 'item3',
+        repoId: 'repo',
+        typeSchemaUri: 'http://type',
+        folderPath: 'folderTest',
+        body: dependsOn(['id2'])
+      },
+
+      // No dependancy.
+      { id: 'id4', label: 'item4', repoId: 'repo', typeSchemaUri: 'http://type', folderPath: 'folderTest/nested' }
+    ];
+
+    it('should import circular dependancies by first creating, then updating them with appropriate ids', async () => {
+      // Create content to import
+
+      const templates = circularDependancies;
+
+      await createContent('temp/import/circular/', templates, false);
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.createMockRepository('targetRepo');
+      mockContent.registerContentType('http://type', 'type', 'targetRepo');
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/circular/',
+        mapFile: 'temp/import/circular.json',
+        baseRepo: 'targetRepo',
+        publish: true
+      };
+      await handler(argv);
+
+      // check items were created appropriately
+
+      expect(mockContent.metrics.itemsCreated).toEqual(4);
+      expect(mockContent.metrics.itemsUpdated).toEqual(3);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((publish as any).publishCalls.length).toEqual(1); // One of the circular dependancies will be published.
+
+      const matches = await mockContent.filterMatch(templates, '', false);
+
+      expect(matches.length).toEqual(templates.length);
+
+      await rimraf('temp/import/circular/');
+    });
+
+    it('should not import any content if passed --validate', async () => {
+      const templates: ItemTemplate[] = [{ label: 'item1', repoId: 'repo', typeSchemaUri: 'http://type' }];
+
+      await createContent('temp/import/validate/', templates, false);
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.createMockRepository('targetRepo');
+      mockContent.registerContentType('http://type', 'type', 'targetRepo');
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/validate/',
+        mapFile: 'temp/import/validate.json',
+        baseRepo: 'targetRepo',
+        validate: true
+      };
+      await handler(argv);
+
+      // No items should have been created.
+      expect(mockContent.metrics.itemsCreated).toEqual(0);
+      expect(mockContent.metrics.itemsUpdated).toEqual(0);
+
+      await rimraf('temp/import/validate/');
+    });
+
+    it('should ask for imported dependancies to be nullified if they are missing, and then skipped if invalid', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses(['y']);
+
+      const templates: ItemTemplate[] = [
+        { label: 'item1', repoId: 'repo', typeSchemaUri: 'http://type', body: dependsOn(['idNotExist']) }
+      ];
+
+      await createContent('temp/import/depNull/', templates, false);
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.createMockRepository('targetRepo');
+      mockContent.registerContentType('http://type', 'type', 'targetRepo', dependantType(1));
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/depNull/',
+        mapFile: 'temp/import/depNull.json',
+        baseRepo: 'targetRepo'
+      };
+      await handler(argv);
+
+      expect(mockContent.metrics.itemsCreated).toEqual(0);
+      expect(mockContent.metrics.itemsUpdated).toEqual(0);
+
+      await rimraf('temp/import/depNull/');
+    });
+
+    it('should abort when failing to create content', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses([]);
+
+      const templates: ItemTemplate[] = [{ label: 'item1', repoId: 'repo', typeSchemaUri: 'http://type' }];
+
+      await createContent('temp/import/abort1/', templates, false);
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.failRepoActions = 'create';
+      mockContent.createMockRepository('targetRepo');
+      mockContent.registerContentType('http://type', 'type', 'targetRepo');
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/abort1/',
+        mapFile: 'temp/import/abort1.json',
+        baseRepo: 'targetRepo',
+        publish: true
+      };
+      expect(await handler(argv)).toBeFalsy();
+
+      // check items were not created
+
+      expect(mockContent.metrics.itemsCreated).toEqual(0);
+
+      await rimraf('temp/import/abort1/');
+    });
+
+    it('should abort when failing to create content with a circular dependancy', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (readline as any).setResponses([]);
+
+      const templates = circularDependancies.slice(0, 3);
+
+      await createContent('temp/import/abort2/', templates, false);
+
+      const mockContent = new MockContent(dynamicContentClientFactory as jest.Mock);
+      mockContent.failRepoActions = 'create';
+      mockContent.createMockRepository('targetRepo');
+      mockContent.registerContentType('http://type', 'type', 'targetRepo');
+
+      const argv = {
+        ...yargArgs,
+        ...config,
+        dir: 'temp/import/abort2/',
+        mapFile: 'temp/import/abort2.json',
+        baseRepo: 'targetRepo',
+        publish: true
+      };
+      expect(await handler(argv)).toBeFalsy();
+
+      // check items were not created
+
+      expect(mockContent.metrics.itemsCreated).toEqual(0);
+
+      await rimraf('temp/import/abort2/');
     });
   });
 });
